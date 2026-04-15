@@ -1,1 +1,14 @@
-/* css styles */
+/* Force ALL navigation links to be a specific color (e.g., white) */
+.navbar-nav .nav-link {
+  color: #ffffff !important; 
+}
+
+/* Force the ACTIVE page link to stay the same color instead of turning black */
+.navbar-nav .nav-link.active {
+  color: #ffffff !important; 
+}
+
+/* Optional: Give it a slight color change when you hover over it */
+.navbar-nav .nav-link:hover {
+  color: #89CFF0 !important; 
+}
