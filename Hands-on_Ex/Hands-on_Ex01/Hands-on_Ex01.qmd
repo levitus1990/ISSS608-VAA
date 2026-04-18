@@ -1,6 +1,13 @@
 ---
 title: "Hands-on Exercise 01"
 author: "Ang Ming Kwan"
+date: "April 18, 2026"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
 ---
 
 # Getting Started
