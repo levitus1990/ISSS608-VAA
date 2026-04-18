@@ -14,7 +14,7 @@ execute:
 
 ## Install and launching R packages
 
-The code chunk below uses p_load() of pacman package to check if tidyverse packages are installed in the computer. If they are, then they will be launched into R.
+The code chunk below uses [p_load()](https://cran.r-project.org/doc/manuals/r-patched/R-admin.html#installing-packages) of pacman package to check if tidyverse packages are installed in the computer. If they are, then they will be launched into R.
 
 ```{r}
 pacman::p_load(tidyverse)
@@ -25,6 +25,7 @@ pacman::p_load(tidyverse)
 ```{r}
 exam_data <- read.csv("data/Exam_data.csv")
 ```
+
 
 # Plotting a simple bar chart
 
