@@ -82,9 +82,9 @@ ul.task-list li input[type="checkbox"] {
     }
 
     const options = {
-      valueNames: ['listing-categories',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
+      valueNames: ['listing-title','listing-author','listing-date','listing-image','listing-description',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
       
-      searchColumns: ["listing-categories"],
+      searchColumns: ["listing-title","listing-author","listing-date","listing-image","listing-description"],
     };
 
     window['quarto-listings'] = window['quarto-listings'] || {};
@@ -184,9 +184,9 @@ window.Quarto = {
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
         
-    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(0)</span></div></div></div>
+    </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
@@ -214,15 +214,52 @@ window.Quarto = {
 
 
 
-<div class="quarto-listing quarto-listing-container-default" id="listing-listing">
-<div class="listing-actions-group">
-    <div class="input-group input-group-sm quarto-listing-filter">
-      <span class="input-group-text"><i class="bi bi-search"></i></span>
-      <input type="text" class="search form-control" placeholder="Filter">
-    </div>
+<div class="quarto-listing quarto-listing-container-grid" id="listing-listing">
+<div class="list grid quarto-listing-cols-3">
+<div class="g-col-1" data-index="0" data-listing-date-sort="1776873600000" data-listing-file-modified-sort="1776957962904" data-listing-date-modified-sort="1776957962000" data-listing-reading-time-sort="17" data-listing-word-count-sort="3260">
+<a href="./Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex_02.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<p class="card-img-top"><img loading='lazy' src="Hands-on_Ex\Hands-on_Ex02\Hands-on_Ex_02_files\figure-html\unnamed-chunk-7-1.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+Hands-on Exercise 02
+</h5>
+<div class="card-text listing-description delink">
+<strong>EXTRAS</strong>
 </div>
-<div class="list quarto-listing-default">
-
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Ang Ming Kwan
+</div>
+<div class="listing-date">
+Apr 23, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
+<div class="g-col-1" data-index="1" data-listing-date-sort="1776441600000" data-listing-file-modified-sort="1776953582484" data-listing-date-modified-sort="1776953582000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2196">
+<a href="./Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 card-left">
+<p class="card-img-top"><img loading='lazy' src="Hands-on_Ex\Hands-on_Ex01\Hands-on_Ex01_files\figure-html\unnamed-chunk-3-1.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
+<div class="card-body post-contents">
+<h5 class="no-anchor card-title listing-title">
+Hands-on Exercise 01
+</h5>
+<div class="card-text listing-description delink">
+In this hands-on exercise, my aim is to learn the basic principles and essential components of ggplot2. I will also be gaining hands-on experience on these components to…
+</div>
+<div class="card-attribution card-text-small justify">
+<div class="listing-author">
+Ang Ming Kwan
+</div>
+<div class="listing-date">
+Apr 18, 2026
+</div>
+</div>
+</div>
+</div></a>
+</div>
 </div>
 <div class="listing-no-matching d-none">No matching items</div>
 </div></main> <!-- /main -->

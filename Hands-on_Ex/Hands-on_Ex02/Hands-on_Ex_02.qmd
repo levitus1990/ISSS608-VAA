@@ -1,0 +1,616 @@
+---
+title: "Hands-on Exercise 02"
+author: "Ang Ming Kwan"
+date: "April 23, 2026"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: false
+---
+
+**EXTRAS**
+
+-   I have checked the data to ensure that it is clean under 1.3
+-   I have considered the identification of outliers in 2.1.1 to enrich my analyses
+
+# 1. Learning Outcome
+
+## 1.1 Installing and loading required libraries
+
+The code chunk below uses p_load to check if below packages have been installed.
+
+-   **ggrepel:** an R package provides geoms for ggplot2 to repel overlapping text labels.
+
+-   **ggthemes:** an R package provides some extra themes, geoms, and scales for ‘ggplot2’.
+
+-   **hrbrthemes:** an R package provides typography-centric themes and theme components for ggplot2.
+
+-   **patchwork:** an R package for preparing composite figure created using ggplot2.
+
+```{r}
+pacman::p_load(ggrepel, patchwork, ggthemes, hrbrthemes, tidyverse)
+```
+
+## 1.2 Importing data
+
+Below code chunk imports a data file called exam_data. It consists of year and end examination grades of a cohort of primary 3 students from a local school.
+
+```{r}
+exam_data <- read_csv("data/Exam_data.csv", show_col_types = FALSE)
+```
+
+## 1.3 Checking data
+
+::: {.callout-info}
+## Ensuring data is clean
+From previous modules, I understand that it is important to check for the quality of data before running further analyses. As such, I have researched on the methods to check for the quality of data and will verify if there is any issues with the data.
+:::
+
+::: {.panel-tabset}
+
+## Summary
+
+```{r}
+summary(exam_data)
+```
+
+## Structure
+
+```{r}
+str(exam_data)
+```
+
+## Missing values
+
+```{r}
+colSums(is.na(exam_data))
+anyNA(exam_data)
+```
+
+## Duplicates
+
+```{r}
+sum(duplicated(exam_data))
+exam_data[duplicated(exam_data), ]
+```
+
+:::
+
+::: {.callout-tip}
+## Conclusion
+Based on our findings, there are no missing values or duplicates. Hence, we can proceed with plotting the visuals and conduct further analyses.
+:::
+
+# 2. Beyond ggplot2 Annotation: ggrepel
+
+Plotting statistical graph requires annotation for better clarity for readers. However, the graph would look extremely cluttered where there is a large number of datapoints.
+
+::: {.panel-tabset}
+
+## The plot
+
+```{r}
+#| echo: false
+ggplot(data=exam_data,
+       aes(x= MATHS,
+           y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              size=0.5) +
+  geom_label(aes(label = ID),
+             hjust = .5,
+             vjust = -.5) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+
+## The code
+
+```{r}
+#| eval: false
+ggplot(data=exam_data,
+       aes(x= MATHS,
+           y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              size=0.5) +
+  geom_label(aes(label = ID),
+             hjust = .5,
+             vjust = -.5) +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+
+:::
+
+To solve this, We simply replace geom_text() by geom_text_repel() and geom_label() by geom_label_repel.
+
+## 2.1 Working with ggrepel
+
+::: {.panel-tabset}
+
+## The plot
+
+```{r}
+#| echo: false
+ggplot(data=exam_data, 
+       aes(x= MATHS, 
+           y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              size=0.5) +  
+  geom_label_repel(aes(label = ID), 
+                   fontface = "bold") +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+
+## The code
+
+```{r}
+#| eval: false
+ggplot(data=exam_data, 
+       aes(x= MATHS, 
+           y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              size=0.5) +  
+  geom_label_repel(aes(label = ID), 
+                   fontface = "bold") +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+
+:::
+
+### 2.1.1 Identification of outliers
+
+::: {.callout-note}
+## Unequal performance between English and Math
+I thought that it would be interesting to point out the students that are extremely good at Math and bad at English, and vice versa. Further studies could be done on these students to understand such fringe cases. For that, I would identify students that scored 80 marks or higher for 1 subject but scored 20 marks or more lower in the other subject.
+:::
+
+::: {.panel-tabset}
+
+## The plot
+
+```{r}
+#| echo: false
+# Step 1: Apply the new, specific logic for outliers
+exam_data$outlier <- (exam_data$ENGLISH >= 80 & (exam_data$ENGLISH - exam_data$MATHS >= 20)) | 
+                     (exam_data$MATHS >= 80 & (exam_data$MATHS - exam_data$ENGLISH >= 20))
+
+# Step 2: Plot the graph using the exact same ggplot code
+ggplot(data = exam_data, 
+       aes(x = MATHS, y = ENGLISH)) +
+  geom_point() +
+  geom_smooth(method = "lm", size = 0.5) +
+  geom_text_repel(data = subset(exam_data, outlier == TRUE),
+                  aes(label = ID),
+                  size = 3) +
+  coord_cartesian(xlim = c(0, 100), ylim = c(0, 100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+
+## The code
+
+```{r}
+#| eval: false
+# Step 1: Apply the new, specific logic for outliers
+exam_data$outlier <- (exam_data$ENGLISH >= 80 & (exam_data$ENGLISH - exam_data$MATHS >= 20)) | 
+                     (exam_data$MATHS >= 80 & (exam_data$MATHS - exam_data$ENGLISH >= 20))
+
+# Step 2: Plot the graph using the exact same ggplot code
+ggplot(data = exam_data, 
+       aes(x = MATHS, y = ENGLISH)) +
+  geom_point() +
+  geom_smooth(method = "lm", size = 0.5) +
+  geom_text_repel(data = subset(exam_data, outlier == TRUE),
+                  aes(label = ID),
+                  size = 3) +
+  coord_cartesian(xlim = c(0, 100), ylim = c(0, 100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+
+:::
+
+::: {.callout-note}
+## High and Low Performers
+I was also interested to identify the students that were high and low performers, and with more data, we could perhaps find correlation between grade performance and other factors by focusing on these identified students. For that, I would identify students that performed better/worse by 2 standard deviations away from the mean. 
+:::
+
+::: {.panel-tabset}
+
+## The plot
+
+```{r}
+#| echo: false
+# 1. Calculate the mean and standard deviation for Maths
+mean_math <- mean(exam_data$MATHS)
+sd_math <- sd(exam_data$MATHS)
+
+# 2. Calculate the mean and standard deviation for English
+mean_eng <- mean(exam_data$ENGLISH)
+sd_eng <- sd(exam_data$ENGLISH)
+
+# 3. Flag as outlier if they are 2 SDs away from the Math average AND/OR the English average
+exam_data$outlier <- abs(exam_data$MATHS - mean_math) > (2 * sd_math) | 
+                     abs(exam_data$ENGLISH - mean_eng) > (2 * sd_eng)
+
+# 4. Plot the graph
+ggplot(data = exam_data, 
+       aes(x = MATHS, y = ENGLISH)) +
+  geom_point() +
+  geom_smooth(method = "lm", size = 0.5) +
+  geom_text_repel(data = subset(exam_data, outlier == TRUE),
+                  aes(label = ID),
+                  size = 3) +
+  coord_cartesian(xlim = c(0, 100), ylim = c(0, 100)) +
+  ggtitle("Highlighting Students 2 SDs Away from Math or English Averages")
+```
+
+## The code
+
+```{r}
+#| eval: false
+# 1. Calculate the mean and standard deviation for Maths
+mean_math <- mean(exam_data$MATHS)
+sd_math <- sd(exam_data$MATHS)
+
+# 2. Calculate the mean and standard deviation for English
+mean_eng <- mean(exam_data$ENGLISH)
+sd_eng <- sd(exam_data$ENGLISH)
+
+# 3. Flag as outlier if they are 2 SDs away from the Math average AND/OR the English average
+exam_data$outlier <- abs(exam_data$MATHS - mean_math) > (2 * sd_math) | 
+                     abs(exam_data$ENGLISH - mean_eng) > (2 * sd_eng)
+
+# 4. Plot the graph
+ggplot(data = exam_data, 
+       aes(x = MATHS, y = ENGLISH)) +
+  geom_point() +
+  geom_smooth(method = "lm", size = 0.5) +
+  geom_text_repel(data = subset(exam_data, outlier == TRUE),
+                  aes(label = ID),
+                  size = 3) +
+  coord_cartesian(xlim = c(0, 100), ylim = c(0, 100)) +
+  ggtitle("Highlighting Students 2 SDs Away from Math or English Averages")
+```
+
+:::
+
+# 3 Beyond ggplot2 Themes
+
+ggplot2 comes with eight built-in themes, they are: theme_gray(), theme_bw(), theme_classic(), theme_dark(), theme_light(), theme_linedraw(), theme_minimal(), and theme_void().
+
+::: {.panel-tabset}
+
+## The plot
+```{r}
+#| echo: false
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  theme_gray() +
+  ggtitle("Distribution of Maths scores")  
+```
+
+## The code
+```{r}
+#| eval: false
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  theme_gray() +
+  ggtitle("Distribution of Maths scores")  
+```
+:::
+
+## 3.1 Working with ggtheme package
+
+ggthemes provides ‘ggplot2’ themes that replicate the look of plots by Edward Tufte, Stephen Few, Fivethirtyeight, The Economist, ‘Stata’, ‘Excel’, and The Wall Street Journal, among others.
+
+In the example below, The Economist theme is used
+
+::: {.panel-tabset}
+
+## The plot
+```{r}
+#| echo: false
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  ggtitle("Distribution of Maths scores") +
+  theme_economist() 
+```
+
+## The code
+```{r}
+#| eval: false
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  ggtitle("Distribution of Maths scores") +
+  theme_economist() 
+```
+:::
+
+As I was also interested to find out what Wall Street Journal theme looked like, I experimented with that theme as well.
+
+```{r}
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  ggtitle("Distribution of Maths scores") +
+  theme_wsj() 
+```
+
+## 3.2 Working with hrbthems package
+
+hrbrthemes package provides a base theme that focuses on typographic elements, including where various labels are placed as well as the fonts that are used.
+
+:::{.panel-tabset}
+## The plot
+
+```{r}
+#| echo: false
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  ggtitle("Distribution of Maths scores") +
+  theme_ipsum()
+```
+
+## The code
+
+```{r}
+#| eval: false
+ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  ggtitle("Distribution of Maths scores") +
+  theme_ipsum()
+```
+:::
+
+:::{.callout-important}
+-   axis_title_size argument is used to increase the font size of the axis title to 18,
+
+-   base_size argument is used to increase the default axis label to 15, and
+
+-   grid argument is used to remove the x-axis grid lines.
+:::
+
+# 4 Beyond Single Graph
+
+Below is an example of how to create a composite plot by combining multiple graphs. We will first create three statistical graphics by using the code chunk below.
+
+:::{.panel-tabset}
+## The plot
+
+```{r}
+#| echo: false
+p1 <- ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") + 
+  coord_cartesian(xlim=c(0,100)) +
+  ggtitle("Distribution of Maths scores")
+
+print(p1)
+```
+
+## The code
+
+```{r}
+#| eval: false
+p1 <- ggplot(data=exam_data, 
+             aes(x = MATHS)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") + 
+  coord_cartesian(xlim=c(0,100)) +
+  ggtitle("Distribution of Maths scores")
+
+print(p1)
+```
+
+:::
+
+Next up,
+
+:::{.panel-tabset}
+## The plot
+
+```{r}
+#| echo: false
+p2 <- ggplot(data=exam_data, 
+             aes(x = ENGLISH)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  coord_cartesian(xlim=c(0,100)) +
+  ggtitle("Distribution of English scores")
+
+print(p2)
+```
+
+## The code
+
+```{r}
+#| eval: false
+p2 <- ggplot(data=exam_data, 
+             aes(x = ENGLISH)) +
+  geom_histogram(bins=20, 
+                 boundary = 100,
+                 color="grey25", 
+                 fill="grey90") +
+  coord_cartesian(xlim=c(0,100)) +
+  ggtitle("Distribution of English scores")
+
+print(p2)
+```
+:::
+
+:::{.panel-tabset}
+## The plot
+
+```{r}
+#| echo: false
+p3 <- ggplot(data=exam_data, 
+             aes(x= MATHS, 
+                 y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              size=0.5) +  
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+
+# Call the variable to print the plot!
+p3
+```
+
+## The code
+
+```{r}
+#| eval: false
+p3 <- ggplot(data=exam_data, 
+             aes(x= MATHS, 
+                 y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              size=0.5) +  
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```
+:::
+
+## 4.1 Creating Composite Graphics: pathwork methods
+
+Patchwork package has a very simple syntax where we can create layouts super easily. Here’s the general syntax that combines:
+
+-   Two-Column Layout using the Plus Sign +.
+-   Parenthesis () to create a subplot group.
+-   Two-Row Layout using the Division Sign /
+
+### 4.1.1  Combining two ggplot2 graphs
+
+:::{.panel-tabset}
+## The plot
+
+```{r}
+#| echo: false
+p1 + p2
+```
+
+## The code
+
+```{r}
+#| eval: false
+p1 + p2
+```
+:::
+
+### 4.1.2 Combining three ggplot2 graphs
+
+Plotting more complex composite using appropriate operations.
+
+-   “/” operator to stack two ggplot2 graphs,
+-   “|” operator to place the plots beside each other,
+-   “()” operator the define the sequence of the plotting.
+
+:::{.panel-tabset}
+## The plot
+```{r}
+#| echo: false
+(p1/p2) | p3
+```
+
+## The code
+```{r}
+#| eval: false
+(p1/p2) | p3
+```
+:::
+
+### 4.1.3 Creating figure with insert
+
+Using inset_element() of patchwork, we can place one or several plots or graphic elements freely on top or below another plot.
+
+:::{.panel-tabset}
+## The plot
+
+```{r}
+#| echo: false
+p3 + inset_element(p2, 
+                   left = 0.02, 
+                   bottom = 0.7, 
+                   right = 0.5, 
+                   top = 1)
+```
+
+## The code
+```{r}
+#| eval: false
+p3 + inset_element(p2, 
+                   left = 0.02, 
+                   bottom = 0.7, 
+                   right = 0.5, 
+                   top = 1)
+```
+:::
+
+### 4.1.4 Creating a composite figure by using patchwork and ggtheme
+
+Figure below is created by combining patchwork and theme-economist() of ggthemes package.
+
+:::{.panel-tabset}
+## The plot
+
+```{r}
+#| echo: false
+patchwork <- (p1 / p2) | p3
+patchwork & theme_economist()
+```
+
+## The code
+
+```{r}
+#| eval: false
+patchwork <- (p1 / p2) | p3
+patchwork & theme_economist()
+```
+:::

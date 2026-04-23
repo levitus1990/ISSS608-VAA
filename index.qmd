@@ -2,14 +2,14 @@
 title: "Welcome to My Visual Analytics Journey"
 listing:
   contents: 
-    - "hands-on_ex/**/*.qmd"
-    - "take-home_ex/**/*.qmd"
-    - "in-class_ex/**/*.qmd"
+    - "Hands-on_Ex/**/*.qmd"   # <-- Capitalized to match your actual folder!
+    - "Take-home_Ex/**/*.qmd"  # <-- (Assuming you will capitalize this one too)
+    - "In-class_Ex/**/*.qmd"   # <-- (Assuming you will capitalize this one too)
   sort: "date desc"
-  type: default
-  categories: true
-  sort-ui: true
-  filter-ui: true
+  type: grid
+  categories: false
+  sort-ui: false
+  filter-ui: false
   page-size: 6
 ---
 
