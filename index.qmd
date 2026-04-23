@@ -1,5 +1,16 @@
 ---
-title: "ISSS608-VAA"
+title: "Welcome to My Visual Analytics Journey"
+listing:
+  contents: 
+    - "hands-on_ex/**/*.qmd"
+    - "take-home_ex/**/*.qmd"
+    - "in-class_ex/**/*.qmd"
+  sort: "date desc"
+  type: default
+  categories: true
+  sort-ui: true
+  filter-ui: true
+  page-size: 6
 ---
 
 Welcome to **ISSS08 Visual Analytics and Applications**. In this website, you will find my coursework prepared for this course.
