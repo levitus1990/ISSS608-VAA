@@ -1,12 +1,5 @@
 [
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Welcome to My Visual Analytics Journey",
-    "section": "",
-    "text": "Welcome to ISSS08 Visual Analytics and Applications. In this website, you will find my coursework prepared for this course.\n\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 03\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 25, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 02\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 23, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 01\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 18, 2026\n\n\n\n\n\n\nNo matching items"
-  },
-  {
     "objectID": "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02.html",
     "href": "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02.html",
     "title": "Hands-on Exercise 02",
@@ -222,5 +215,12 @@
     "title": "Hands-on Exercise 01",
     "section": "8.3 Working with theme: theme_miminal()",
     "text": "8.3 Working with theme: theme_miminal()\nA horizontal bar chart plotted using theme_minimal()\n\nggplot(data=exam_data, \n       aes(x=RACE)) +\n  geom_bar() +\n  coord_flip() +\n  theme_minimal()"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Welcome to My Visual Analytics Journey",
+    "section": "",
+    "text": "Welcome to ISSS08 Visual Analytics and Applications. In this website, you will find my coursework prepared for this course.\n\n\n\n\n\n\n\n\n\n\n\n\nTake-home_Ex01\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTake-home_Ex02\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTake-home_Ex03\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nIn-class_Ex01\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nIn-class_Ex02\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nIn-class_Ex03\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 03\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 25, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 02\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 23, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 01\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 18, 2026\n\n\n\n\n\n\nNo matching items"
   }
 ]
