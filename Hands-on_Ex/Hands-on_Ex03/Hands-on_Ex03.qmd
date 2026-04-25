@@ -1,5 +1,13 @@
 ---
-title: "Hands-on_Ex03"
-format: html
+title: "Hands-on Exercise 03"
+author: "Ang Ming Kwan"
+date: "April 25, 2026"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: false
 ---
+
 
