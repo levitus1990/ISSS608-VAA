@@ -7,7 +7,7 @@ execute:
   eval: true
   echo: true
   warning: false
-  freeze: false
+  freeze: true
 ---
 
 **EXTRAS**
@@ -43,13 +43,13 @@ exam_data <- read_csv("data/Exam_data.csv", show_col_types = FALSE)
 
 ## 1.3 Checking data
 
-::: {.callout-info}
+::: callout-info
 ## Ensuring data is clean
+
 From previous modules, I understand that it is important to check for the quality of data before running further analyses. As such, I have researched on the methods to check for the quality of data and will verify if there is any issues with the data.
 :::
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## Summary
 
 ```{r}
@@ -75,11 +75,11 @@ anyNA(exam_data)
 sum(duplicated(exam_data))
 exam_data[duplicated(exam_data), ]
 ```
-
 :::
 
-::: {.callout-tip}
+::: callout-tip
 ## Conclusion
+
 Based on our findings, there are no missing values or duplicates. Hence, we can proceed with plotting the visuals and conduct further analyses.
 :::
 
@@ -87,8 +87,7 @@ Based on our findings, there are no missing values or duplicates. Hence, we can 
 
 Plotting statistical graph requires annotation for better clarity for readers. However, the graph would look extremely cluttered where there is a large number of datapoints.
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## The plot
 
 ```{r}
@@ -124,15 +123,13 @@ ggplot(data=exam_data,
                   ylim=c(0,100)) +
   ggtitle("English scores versus Maths scores for Primary 3")
 ```
-
 :::
 
 To solve this, We simply replace geom_text() by geom_text_repel() and geom_label() by geom_label_repel.
 
 ## 2.1 Working with ggrepel
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## The plot
 
 ```{r}
@@ -166,18 +163,17 @@ ggplot(data=exam_data,
                   ylim=c(0,100)) +
   ggtitle("English scores versus Maths scores for Primary 3")
 ```
-
 :::
 
 ### 2.1.1 Identification of outliers
 
-::: {.callout-note}
+::: callout-note
 ## Unequal performance between English and Math
+
 I thought that it would be interesting to point out the students that are extremely good at Math and bad at English, and vice versa. Further studies could be done on these students to understand such fringe cases. For that, I would identify students that scored 80 marks or higher for 1 subject but scored 20 marks or more lower in the other subject.
 :::
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## The plot
 
 ```{r}
@@ -217,16 +213,15 @@ ggplot(data = exam_data,
   coord_cartesian(xlim = c(0, 100), ylim = c(0, 100)) +
   ggtitle("English scores versus Maths scores for Primary 3")
 ```
-
 :::
 
-::: {.callout-note}
+::: callout-note
 ## High and Low Performers
-I was also interested to identify the students that were high and low performers, and with more data, we could perhaps find correlation between grade performance and other factors by focusing on these identified students. For that, I would identify students that performed better/worse by 2 standard deviations away from the mean. 
+
+I was also interested to identify the students that were high and low performers, and with more data, we could perhaps find correlation between grade performance and other factors by focusing on these identified students. For that, I would identify students that performed better/worse by 2 standard deviations away from the mean.
 :::
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## The plot
 
 ```{r}
@@ -282,16 +277,15 @@ ggplot(data = exam_data,
   coord_cartesian(xlim = c(0, 100), ylim = c(0, 100)) +
   ggtitle("Highlighting Students 2 SDs Away from Math or English Averages")
 ```
-
 :::
 
 # 3 Beyond ggplot2 Themes
 
 ggplot2 comes with eight built-in themes, they are: theme_gray(), theme_bw(), theme_classic(), theme_dark(), theme_light(), theme_linedraw(), theme_minimal(), and theme_void().
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## The plot
+
 ```{r}
 #| echo: false
 ggplot(data=exam_data, 
@@ -305,6 +299,7 @@ ggplot(data=exam_data,
 ```
 
 ## The code
+
 ```{r}
 #| eval: false
 ggplot(data=exam_data, 
@@ -324,9 +319,9 @@ ggthemes provides ‘ggplot2’ themes that replicate the look of plots by Edwar
 
 In the example below, The Economist theme is used
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## The plot
+
 ```{r}
 #| echo: false
 ggplot(data=exam_data, 
@@ -340,6 +335,7 @@ ggplot(data=exam_data,
 ```
 
 ## The code
+
 ```{r}
 #| eval: false
 ggplot(data=exam_data, 
@@ -370,7 +366,7 @@ ggplot(data=exam_data,
 
 hrbrthemes package provides a base theme that focuses on typographic elements, including where various labels are placed as well as the fonts that are used.
 
-:::{.panel-tabset}
+::: panel-tabset
 ## The plot
 
 ```{r}
@@ -400,7 +396,7 @@ ggplot(data=exam_data,
 ```
 :::
 
-:::{.callout-important}
+::: callout-important
 -   axis_title_size argument is used to increase the font size of the axis title to 18,
 
 -   base_size argument is used to increase the default axis label to 15, and
@@ -412,7 +408,7 @@ ggplot(data=exam_data,
 
 Below is an example of how to create a composite plot by combining multiple graphs. We will first create three statistical graphics by using the code chunk below.
 
-:::{.panel-tabset}
+::: panel-tabset
 ## The plot
 
 ```{r}
@@ -444,12 +440,11 @@ p1 <- ggplot(data=exam_data,
 
 print(p1)
 ```
-
 :::
 
 Next up,
 
-:::{.panel-tabset}
+::: panel-tabset
 ## The plot
 
 ```{r}
@@ -483,7 +478,7 @@ print(p2)
 ```
 :::
 
-:::{.panel-tabset}
+::: panel-tabset
 ## The plot
 
 ```{r}
@@ -526,9 +521,9 @@ Patchwork package has a very simple syntax where we can create layouts super eas
 -   Parenthesis () to create a subplot group.
 -   Two-Row Layout using the Division Sign /
 
-### 4.1.1  Combining two ggplot2 graphs
+### 4.1.1 Combining two ggplot2 graphs
 
-:::{.panel-tabset}
+::: panel-tabset
 ## The plot
 
 ```{r}
@@ -549,17 +544,19 @@ p1 + p2
 Plotting more complex composite using appropriate operations.
 
 -   “/” operator to stack two ggplot2 graphs,
--   “|” operator to place the plots beside each other,
+-   “\|” operator to place the plots beside each other,
 -   “()” operator the define the sequence of the plotting.
 
-:::{.panel-tabset}
+::: panel-tabset
 ## The plot
+
 ```{r}
 #| echo: false
 (p1/p2) | p3
 ```
 
 ## The code
+
 ```{r}
 #| eval: false
 (p1/p2) | p3
@@ -570,7 +567,7 @@ Plotting more complex composite using appropriate operations.
 
 Using inset_element() of patchwork, we can place one or several plots or graphic elements freely on top or below another plot.
 
-:::{.panel-tabset}
+::: panel-tabset
 ## The plot
 
 ```{r}
@@ -583,6 +580,7 @@ p3 + inset_element(p2,
 ```
 
 ## The code
+
 ```{r}
 #| eval: false
 p3 + inset_element(p2, 
@@ -597,7 +595,7 @@ p3 + inset_element(p2,
 
 Figure below is created by combining patchwork and theme-economist() of ggthemes package.
 
-:::{.panel-tabset}
+::: panel-tabset
 ## The plot
 
 ```{r}
