@@ -336,10 +336,59 @@
     "text": "4.1 Creating Composite Graphics: pathwork methods\nPatchwork package has a very simple syntax where we can create layouts super easily. Here’s the general syntax that combines:\n\nTwo-Column Layout using the Plus Sign +.\nParenthesis () to create a subplot group.\nTwo-Row Layout using the Division Sign /\n\n\n4.1.1 Combining two ggplot2 graphs\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\np1 + p2\n\n\n\n\n\n\n4.1.2 Combining three ggplot2 graphs\nPlotting more complex composite using appropriate operations.\n\n“/” operator to stack two ggplot2 graphs,\n“|” operator to place the plots beside each other,\n“()” operator the define the sequence of the plotting.\n\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n(p1/p2) | p3\n\n\n\n\n\n\n4.1.3 Creating figure with insert\nUsing inset_element() of patchwork, we can place one or several plots or graphic elements freely on top or below another plot.\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\np3 + inset_element(p2, \n                   left = 0.02, \n                   bottom = 0.7, \n                   right = 0.5, \n                   top = 1)\n\n\n\n\n\n\n4.1.4 Creating a composite figure by using patchwork and ggtheme\nFigure below is created by combining patchwork and theme-economist() of ggthemes package.\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\npatchwork &lt;- (p1 / p2) | p3\npatchwork & theme_economist()"
   },
   {
+    "objectID": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#loading-r-packages",
+    "href": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#loading-r-packages",
+    "title": "Hands-on Exercise 03B",
+    "section": "1.1 Loading R Packages",
+    "text": "1.1 Loading R Packages\nWe will need below R packages:\n\nplotly, R library for plotting interactive statistical graphs.\ngganimate, an ggplot extension for creating animated statistical graphs.\ngifski converts video frames to GIF animations using pngquant’s fancy features for efficient cross-frame palettes and temporal dithering. It produces animated GIFs that use thousands of colors per frame.\ngapminder: An excerpt of the data available at Gapminder.org. We just want to use its country_colors scheme.\ntidyverse, a family of modern R packages specially designed to support data science, analysis and communication task including creating static statistical graphs.\n\n\npacman::p_load(readxl, gifski, gapminder,\n               plotly, gganimate, tidyverse)"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#importing-the-data",
+    "href": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#importing-the-data",
+    "title": "Hands-on Exercise 03B",
+    "section": "1.2 Importing the data",
+    "text": "1.2 Importing the data\nThe Data worksheet from GlobalPopulation Excel workbook will be used.\n\ncol &lt;- c(\"Country\", \"Continent\")\nglobalPop &lt;- read_xls(\"data/GlobalPopulation.xls\",\n                      sheet=\"Data\") %&gt;%\n  mutate_each_(funs(factor(.)), col) %&gt;%\n  mutate(Year = as.integer(Year))"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#things-to-learn-from-the-code-chunk-above",
+    "href": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#things-to-learn-from-the-code-chunk-above",
+    "title": "Hands-on Exercise 03B",
+    "section": "Things to learn from the code chunk above",
+    "text": "Things to learn from the code chunk above\n\nread_xls() of readxl package is used to import the Excel worksheet.\nmutate_each of dplyr package is used to convert all character data type into factor.\nmutate of dplyr package is used to convert data values of Year field into integer."
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#building-a-static-population-bubble-plot",
+    "href": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#building-a-static-population-bubble-plot",
+    "title": "Hands-on Exercise 03B",
+    "section": "2.1 Building a static population bubble plot",
+    "text": "2.1 Building a static population bubble plot\nIn the code chunk below, the basic ggplot2 functions are used to create a static bubble plot.\n\nggplot(globalPop, aes(x = Old, y = Young, \n                      size = Population, \n                      colour = Country)) +\n  geom_point(alpha = 0.7, \n             show.legend = FALSE) +\n  scale_colour_manual(values = country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(title = 'Year: {frame_time}', \n       x = '% Aged', \n       y = '% Young')"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#building-the-animated-bubble-plot",
+    "href": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#building-the-animated-bubble-plot",
+    "title": "Hands-on Exercise 03B",
+    "section": "2.2 Building the animated bubble plot",
+    "text": "2.2 Building the animated bubble plot\nIn the code chunk below,\n\ntransition_time() of gganimate is used to create transition through distinct states in time (i.e. Year).\nease_aes() is used to control easing of aesthetics. The default is linear. Other methods are: quadratic, cubic, quartic, quintic, sine, circular, exponential, elastic, back, and bounce.\n\n\nggplot(globalPop, aes(x = Old, y = Young, \n                      size = Population, \n                      colour = Country)) +\n  geom_point(alpha = 0.7, \n             show.legend = FALSE) +\n  scale_colour_manual(values = country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(title = 'Year: {frame_time}', \n       x = '% Aged', \n       y = '% Young') +\n  transition_time(Year) +       \n  ease_aes('linear')"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#building-an-animated-bubble-plot-ggplotly",
+    "href": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#building-an-animated-bubble-plot-ggplotly",
+    "title": "Hands-on Exercise 03B",
+    "section": "3.1 Building an animated bubble plot: ggplotly()",
+    "text": "3.1 Building an animated bubble plot: ggplotly()\nThe animated bubble plot below includes a play/pause button and a slider component for controlling the animation\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\ngg &lt;- ggplot(globalPop, \n       aes(x = Old, \n           y = Young, \n           size = Population, \n           colour = Country)) +\n  geom_point(aes(size = Population,\n                 frame = Year),\n             alpha = 0.7, \n             show.legend = FALSE) +\n  scale_colour_manual(values = country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(x = '% Aged', \n       y = '% Young')\n\nggplotly(gg)\n\n\n\n\nNotice that although show.legend = FALSE argument was used, the legend still appears on the plot. To overcome this problem, theme(legend.position='none') should be used as shown in the plot and code chunk below.\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\ngg &lt;- ggplot(globalPop, \n       aes(x = Old, \n           y = Young, \n           size = Population, \n           colour = Country)) +\n  geom_point(aes(size = Population,\n                 frame = Year),\n             alpha = 0.7) +\n  scale_colour_manual(values = country_colors) +\n  scale_size(range = c(2, 12)) +\n  labs(x = '% Aged', \n       y = '% Young') + \n  theme(legend.position='none')\n\nggplotly(gg)"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#building-an-animated-bubble-plot-plot_ly",
+    "href": "Hands-on_Ex/Hands-on_Ex03B/Hands-on_Ex03B.html#building-an-animated-bubble-plot-plot_ly",
+    "title": "Hands-on Exercise 03B",
+    "section": "3.2 Building an animated bubble plot: plot_ly()",
+    "text": "3.2 Building an animated bubble plot: plot_ly()\nIn this sub-section, you will learn how to create an animated bubble plot by using plot_ly() method.\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\nbp &lt;- globalPop %&gt;%\n  plot_ly(x = ~Old, \n          y = ~Young, \n          size = ~Population, \n          color = ~Continent,\n          sizes = c(2, 100),\n          frame = ~Year, \n          text = ~Country, \n          hoverinfo = \"text\",\n          type = 'scatter',\n          mode = 'markers'\n          ) %&gt;%\n  layout(showlegend = FALSE)\nbp"
+  },
+  {
     "objectID": "index.html",
     "href": "index.html",
     "title": "Welcome to My Visual Analytics Journey",
     "section": "",
-    "text": "Welcome to ISSS08 Visual Analytics and Applications. In this website, you will find my coursework prepared for this course.\n\n\n\n\n\n\n\n\n\n\n\n\nTake-home_Ex01\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTake-home_Ex02\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTake-home_Ex03\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nIn-class_Ex01\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nIn-class_Ex02\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nIn-class_Ex03\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 03A\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 30, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 03\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 25, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 02\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 23, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 01\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 18, 2026\n\n\n\n\n\n\nNo matching items"
+    "text": "Welcome to ISSS08 Visual Analytics and Applications. In this website, you will find my coursework prepared for this course.\n\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 03A\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 30, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 03B\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 30, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 02\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 23, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 01\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 18, 2026\n\n\n\n\n\n\nNo matching items"
   }
 ]

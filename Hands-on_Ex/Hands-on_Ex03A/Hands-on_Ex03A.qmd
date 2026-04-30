@@ -62,7 +62,7 @@ If it used within a shiny application, elements associated with an id (data_id) 
 
 ## 2.1 Tooltip effect with tooltip aesthetic
 
-Below shows a typical code chunk to plot an interactive statistical graph by using ggiraph package. Notice that the code chunk consists of two parts. First, an ggplot object will be created. Next, girafe() of ggiraph will be used to create an interactive svg object.
+Below shows a typical code chunk to plot an interactive statistical graph by using ggiraph package. Notice that the code chunk consists of two parts. First, an ggplot object will be created. Next, `girafe()` of ggiraph will be used to create an interactive svg object.
 
 By hovering the mouse pointer on an data point of interest, the student’s ID will be displayed.
 
@@ -170,7 +170,7 @@ girafe(
 
 ## 2.3 Customising Tooltip style
 
-Code chunk below uses opts_tooltip() of ggiraph to customize tooltip rendering by add css declarations.
+Code chunk below uses `opts_tooltip()` of ggiraph to customize tooltip rendering by add css declarations.
 
 Notice the background colour of the tooltip is black and the font colour is white and bold.
 
@@ -472,9 +472,9 @@ girafe(
 
 # 4. Click effect with onclick
 
-onclick argument of ggiraph provides hotlink interactivity on the web.
+`onclick` argument of ggiraph provides hotlink interactivity on the web.
 
-The code chunk below shows an example of onclick
+The code chunk below shows an example of `onclick`.
 
 Interactivity: Web document link with a data object will be displayed on the web browser upon mouse click.
 
@@ -630,7 +630,7 @@ There are two ways to create interactive graph by using plotly, they are:
 
 -   by using ggplotly()
 
-## 6.1 Creating an interactive scatter plot: plot_ly() method
+## 6.1 Creating an interactive scatter plot: `plot_ly()` method
 
 The tabset below shows an example a basic interactive plot created by using plot_ly().
 
@@ -654,7 +654,7 @@ plot_ly(data = exam_data,
 ```
 :::
 
-## 6.2 Working with visual variable: plot_ly()
+## 6.2 Working with visual variable: `plot_ly()`
 
 In the code chunk below, color argument is mapped to a qualitative visual variable (i.e. RACE).
 
@@ -682,7 +682,7 @@ plot_ly(data = exam_data,
 ```
 :::
 
-# 7. Creating an interactive scatter plot: ggplotly()
+# 7. Creating an interactive scatter plot: `ggplotly()`
 
 The code chunk below plots an interactive scatter plot by using ggplotly().
 
