@@ -221,6 +221,7 @@ ggplot(exam,
 
 ::: callout-warning
 ## Important
+
 It is important include the argument calc_ecdf = TRUE in `stat_density_ridges()`.
 :::
 
