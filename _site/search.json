@@ -1,5 +1,89 @@
 [
   {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#installing-and-loading-packages",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#installing-and-loading-packages",
+    "title": "Hands-on Exercise 04A",
+    "section": "1.1 Installing and Loading Packages",
+    "text": "1.1 Installing and Loading Packages\n\npacman::p_load(ggdist, ggridges, ggthemes,\n               colorspace, tidyverse)"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#data-import",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#data-import",
+    "title": "Hands-on Exercise 04A",
+    "section": "1.2 Data import",
+    "text": "1.2 Data import\n\nexam &lt;- read_csv(\"data/Exam_data.csv\")"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#plotting-ridgeline-graph-ggridges-method",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#plotting-ridgeline-graph-ggridges-method",
+    "title": "Hands-on Exercise 04A",
+    "section": "2.1 Plotting ridgeline graph: ggridges method",
+    "text": "2.1 Plotting ridgeline graph: ggridges method\nThere are several ways to plot ridgeline plot with R. In this section, you will learn how to plot ridgeline plot by using ggridges package.\nggridges package provides two main geom to plot gridgeline plots, they are: geom_ridgeline() and geom_density_ridges(). The former takes height values directly to draw the ridgelines, and the latter first estimates data densities and then draws those using ridgelines.\nThe ridgeline plot below is plotted by using geom_density_ridges().\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nggplot(exam, \n       aes(x = ENGLISH, \n           y = CLASS)) +\n  geom_density_ridges(\n    scale = 3,\n    rel_min_height = 0.01,\n    bandwidth = 3.4,\n    fill = lighten(\"#7097BB\", .3),\n    color = \"white\"\n  ) +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n    ) +\n  scale_y_discrete(name = NULL, expand = expansion(add = c(0.2, 2.6))) +\n  theme_ridges()"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#varying-fill-colors-along-the-x-axis",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#varying-fill-colors-along-the-x-axis",
+    "title": "Hands-on Exercise 04A",
+    "section": "2.2 Varying fill colors along the x axis",
+    "text": "2.2 Varying fill colors along the x axis\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nggplot(exam, \n       aes(x = ENGLISH, \n           y = CLASS,\n           fill = stat(x))) +\n  geom_density_ridges_gradient(\n    scale = 3,\n    rel_min_height = 0.01) +\n  scale_fill_viridis_c(name = \"Temp. [F]\",\n                       option = \"C\") +\n  scale_x_continuous(\n    name = \"English grades\",\n    expand = c(0, 0)\n  ) +\n  scale_y_discrete(name = NULL, expand = expansion(add = c(0.2, 2.6))) +\n  theme_ridges()"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#mapping-the-probabilities-directly-onto-colour",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#mapping-the-probabilities-directly-onto-colour",
+    "title": "Hands-on Exercise 04A",
+    "section": "2.3 Mapping the probabilities directly onto colour",
+    "text": "2.3 Mapping the probabilities directly onto colour\nBeside providing additional geom objects to support the need to plot ridgeline plot, ggridges package also provides a stat function called stat_density_ridges() that replaces stat_density() of ggplot2.\nFigure below is plotted by mapping the probabilities calculated by using stat(ecdf) which represent the empirical cumulative density function for the distribution of English score.\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nggplot(exam,\n       aes(x = ENGLISH, \n           y = CLASS, \n           fill = 0.5 - abs(0.5-stat(ecdf)))) +\n  stat_density_ridges(geom = \"density_ridges_gradient\", \n                      calc_ecdf = TRUE) +\n  scale_fill_viridis_c(name = \"Tail probability\",\n                       direction = -1) +\n  theme_ridges()\n\n\n\n\n\n\n\n\n\n\nWarningImportant\n\n\n\nIt is important include the argument calc_ecdf = TRUE in stat_density_ridges()."
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#ridgeline-plots-with-quantile-lines",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#ridgeline-plots-with-quantile-lines",
+    "title": "Hands-on Exercise 04A",
+    "section": "2.4 Ridgeline plots with quantile lines",
+    "text": "2.4 Ridgeline plots with quantile lines\nBy using geom_density_ridges_gradient(), we can colour the ridgeline plot by quantile, via the calculated ‘stat(quantile)’ aesthetic as shown in the figure below.\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nggplot(exam,\n       aes(x = ENGLISH, \n           y = CLASS, \n           fill = factor(stat(quantile))\n           )) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE, \n    quantiles = 4,\n    quantile_lines = TRUE) +\n  scale_fill_viridis_d(name = \"Quartiles\") +\n  theme_ridges()\n\n\n\n\nInstead of using number to define the quantiles, we can also specify quantiles by cut points such as 2.5% and 97.5% tails to colour the ridgeline plot as shown in the figure below.\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nggplot(exam,\n       aes(x = ENGLISH, \n           y = CLASS, \n           fill = factor(stat(quantile))\n           )) +\n  stat_density_ridges(\n    geom = \"density_ridges_gradient\",\n    calc_ecdf = TRUE, \n    quantiles = c(0.025, 0.975)\n    ) +\n  scale_fill_manual(\n    name = \"Probability\",\n    values = c(\"#FF0000A0\", \"#A0A0A0A0\", \"#0000FFA0\"),\n    labels = c(\"(0, 0.025]\", \"(0.025, 0.975]\", \"(0.975, 1]\")\n  ) +\n  theme_ridges()"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#plotting-a-half-eye-graph",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#plotting-a-half-eye-graph",
+    "title": "Hands-on Exercise 04A",
+    "section": "3.1 Plotting a Half Eye Graph",
+    "text": "3.1 Plotting a Half Eye Graph\nFirst, I will plot a Half-Eye graph by using stat_halfeye() of ggdist package.\nThis produces a Half Eye visualization, which is contains a half-density and a slab-interval.\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nggplot(exam, \n       aes(x = RACE, \n           y = ENGLISH)) +\n  stat_halfeye(adjust = 0.5,\n               justification = -0.2,\n               .width = 0,\n               point_colour = NA)\n\n\n\n\n\n\n\n\n\n\nTipThings to learn from the code chunk above\n\n\n\nWe remove the slab interval by setting .width = 0 and point_colour=NA"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#adding-the-dot-plots-with-stats_dots",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#adding-the-dot-plots-with-stats_dots",
+    "title": "Hands-on Exercise 04A",
+    "section": "3.2 Adding the Dot Plots with stats_dots()",
+    "text": "3.2 Adding the Dot Plots with stats_dots()\nNext, I will add the third geometry layer using stat_dots() of ggdist package. This produces a half-dotplot, which is similar to a histogram that indicates the number of samples (number of dots) in each bin. I will select side = “left” to indicate we want it on the left-hand side.\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nggplot(exam, \n       aes(x = RACE, \n           y = ENGLISH)) +\n  stat_halfeye(adjust = 0.5,\n               justification = -0.2,\n               .width = 0,\n               point_colour = NA) +\n  geom_boxplot(width = .20,\n               outlier.shape = NA) +\n  stat_dots(side = \"left\", \n            justification = 1.2, \n            binwidth = .5,\n            dotsize = 2)"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#finishing-touch",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#finishing-touch",
+    "title": "Hands-on Exercise 04A",
+    "section": "3.3 Finishing touch",
+    "text": "3.3 Finishing touch\nLastly, coord_flip() of ggplot2 package will be used to flip the raincloud chart horizontally to give it the raincloud appearance. At the same time, theme_economist() of ggthemes package is used to give the raincloud chart a professional publishing standard look.\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nggplot(exam, \n       aes(x = RACE, \n           y = ENGLISH)) +\n  stat_halfeye(adjust = 0.5,\n               justification = -0.2,\n               .width = 0,\n               point_colour = NA) +\n  geom_boxplot(width = .20,\n               outlier.shape = NA) +\n  stat_dots(side = \"left\", \n            justification = 1.2, \n            binwidth = .5,\n            dotsize = 1.5) +\n  coord_flip() +\n  theme_economist()"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#animating-the-plot",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#animating-the-plot",
+    "title": "Hands-on Exercise 04A",
+    "section": "4.1 Animating the plot",
+    "text": "4.1 Animating the plot\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nlibrary(readr)\nlibrary(dplyr)\nlibrary(gganimate)\n\n# Import your data\nexam &lt;- read_csv(\"data/Exam_data.csv\")\n\n# Make sure CLASS is a factor (so gganimate can treat each level as a state)\nexam &lt;- exam %&gt;%\n  mutate(CLASS = factor(CLASS))\n\n# Build the animated ridgeline plot\np &lt;- ggplot(exam, \n            aes(x = ENGLISH, \n                y = CLASS, \n                fill = CLASS, \n                group = CLASS)) +\n  geom_density_ridges(\n    scale = 3, \n    alpha = 0.6\n  ) +\n  transition_states(\n    CLASS, \n    transition_length = 2, \n    state_length = 1\n  ) +\n  labs(\n    title = \"Class: {closest_state}\",\n    x = \"English Score\", \n    y = NULL\n  ) +\n  theme_ridges() +\n  enter_fade() + \n  exit_fade()\n\n# Render the animation (adjust nframes and fps as desired)\nanimate(p, nframes = 80, fps = 10)"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#stacking-ridges",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#stacking-ridges",
+    "title": "Hands-on Exercise 04A",
+    "section": "4.2 Stacking ridges",
+    "text": "4.2 Stacking ridges\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexam_long &lt;- exam %&gt;%\n  pivot_longer(c(ENGLISH, MATHS), names_to = \"Subject\", values_to = \"Score\")\n\nggplot(exam_long, aes(x = Score, y = Subject, fill = Subject)) +\n  geom_density_ridges(alpha = 0.7, scale = 2) +\n  theme_ridges() +\n  facet_wrap(~CLASS, ncol = 1, scales = \"free_y\")"
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#half-violin-boxplot-dotplot",
+    "href": "Hands-on_Ex/Hands-on_Ex04A/Hands-on_Ex04A.html#half-violin-boxplot-dotplot",
+    "title": "Hands-on Exercise 04A",
+    "section": "4.3 Half-Violin, Boxplot + Dotplot",
+    "text": "4.3 Half-Violin, Boxplot + Dotplot\n\nThe plotThe code\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nggplot(exam, aes(x = CLASS, y = ENGLISH)) +\n  stat_halfeye(\n    aes(fill = CLASS),\n    side         = \"right\",     # use full \"right\"\n    .width       = c(.5, .8),   # 50% & 80% intervals\n    justification = 0.3\n  ) +\n  geom_boxplot(width = 0.15, outlier.shape = NA) +\n  geom_jitter(width = 0.1, size = 1, alpha = 0.6) +\n  coord_flip() +\n  theme_minimal()"
+  },
+  {
     "objectID": "Hands-on_Ex/Hands-on_Ex03A/Hands-on_Ex03A.html",
     "href": "Hands-on_Ex/Hands-on_Ex03A/Hands-on_Ex03A.html",
     "title": "Hands-on Exercise 03A",
@@ -389,6 +473,6 @@
     "href": "index.html",
     "title": "Welcome to My Visual Analytics Journey",
     "section": "",
-    "text": "Welcome to ISSS08 Visual Analytics and Applications. In this website, you will find my coursework prepared for this course.\n\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 03A\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 30, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 03B\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 30, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 02\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 23, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 01\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 18, 2026\n\n\n\n\n\n\nNo matching items"
+    "text": "Welcome to ISSS08 Visual Analytics and Applications. In this website, you will find my coursework prepared for this course.\n\n\n\n\n\n\n\n\n\n\n\n\nHands-on_Ex04B\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nHands-on_Ex04C\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nHands-on_Ex04D\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 04A\n\n\n\n\n\n\nAng Ming Kwan\n\n\nMay 6, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 03A\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 30, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 03B\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 30, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 02\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 23, 2026\n\n\n\n\n\n\n\n\n\n\n\nHands-on Exercise 01\n\n\n\n\n\n\nAng Ming Kwan\n\n\nApr 18, 2026\n\n\n\n\n\n\nNo matching items"
   }
 ]
