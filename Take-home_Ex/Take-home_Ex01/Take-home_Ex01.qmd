@@ -1,5 +1,898 @@
 ---
-title: "Take-home_Ex01"
-format: html
-draft: true
+title: "Take-home Exercise 01"
+author: "Ang Ming Kwan"
+date: "May 8, 2026"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
 ---
+
+## Visual Analytics for Data Discovery: Exploring a Motor Vehicle Insurance Portfolio
+
+## 1 Introduction
+
+### 1.1 Background
+
+Insurers often carry underperforming portfolios where the root causes of poor profitability and high volatility remain unknown. Traditionally, the use of analytics in the insurance industry has been limited to dashboard reporting in commercial off-the-shelf tools such as Tableau and Microsoft Power BI. These tools, while accessible, lack advanced analytical capabilities for deeper exploratory investigation.
+
+Visual analytics — which integrates data visualisation, statistics, and data mining guided by human judgment — offers a more powerful approach. By combining automated processing with pattern recognition, visual analytics can surface unexpected insights that drive effective data-driven decision-making.
+
+### 1.2 Objective and the Analytical Questions
+
+This take-home exercise applies appropriate visual analytics techniques to a real-world motor vehicle insurance portfolio from a Spanish non-life insurance company, using **ggplot2** and its extensions in R. The specific analytical questions addressed are:
+
+-   What are the distributions and characteristics of the key numerical and categorical variables in the portfolio?
+
+-   What factors influence the **profitability** (measured by loss ratio) and **volatility** (measured by claim frequency and severity) of the insurance portfolio?
+
+-   Are there statistically significant differences in loss performance across policy types, driver profiles, and geographic segments?
+
+------------------------------------------------------------------------
+
+## 2 Getting Started
+
+### 2.1 Setting the Analytical Tools
+
+The R packages used in this exercise are:
+
+-   [**tidyverse**](https://www.tidyverse.org/) for data import, wrangling, and visualisation via the grammar of graphics;
+
+-   [**readr**](https://readr.tidyverse.org/) for reading delimited data files;
+
+-   [**ggplot2**](https://ggplot2.tidyverse.org/) as the primary visualisation engine;
+
+-   [**ggdist**](https://mjskay.github.io/ggdist/) for visualising distributions, uncertainty, and `stat_pointinterval()` plots;
+
+-   [**ggridges**](https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html) for ridgeline density plots with quantile shading across groups;
+
+-   [**ggstatsplot**](https://indrajeetpatil.github.io/ggstatsplot/) for statistical charts with built-in hypothesis test annotations, including `ggbarstats()` for association tests;
+
+-   [**ggiraph**](https://davidgohel.github.io/ggiraph/) for making ggplot2 graphics interactive with tooltips and hover highlighting;
+
+-   [**ggpubr**](https://rpkgs.datanovia.com/ggpubr/) for annotating pairwise statistical comparisons directly onto plots;
+
+-   [**ggcorrplot**](https://rpkgs.datanovia.com/ggcorrplot/) for visualising correlation matrices;
+
+-   [**colorspace**](https://colorspace.r-forge.r-project.org/) for colour manipulation (e.g., `lighten()`);
+
+-   [**patchwork**](https://patchwork.data-imaginist.com/) for composing multiple ggplot2 panels;
+
+-   [**scales**](https://scales.r-lib.org/) for axis formatting (e.g., percent, comma);
+
+-   [**viridis**](https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html) for colour-blind-safe palettes; and
+
+-   [**plotly**](https://plotly.com/r/) for converting ggplot2 charts to interactive plotly visualisations.
+
+The code chunk below uses `p_load()` from the **pacman** package to check, install, and load all required packages.
+
+```{r}
+#| label: load-packages
+pacman::p_load(
+  tidyverse, readr,
+  ggdist, ggridges, ggstatsplot,
+  ggiraph, ggpubr,
+  ggcorrplot, colorspace,
+  patchwork, scales, viridis, plotly
+)
+```
+
+A consistent ggplot2 theme is set globally to maintain visual coherence across all plots.
+
+```{r}
+#| label: set-theme
+theme_set(
+  theme_minimal(base_size = 12) +
+    theme(
+      plot.title   = element_text(face = "bold", hjust = 0.5, size = 13),
+      plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 11),
+      axis.title.y = element_text(angle = 360, vjust = 0.5, hjust = 1),
+      legend.position = "bottom",
+      panel.grid.minor = element_blank()
+    )
+)
+```
+
+### 2.2 Data Source
+
+The dataset is a real-world motor vehicle insurance portfolio from a Spanish non-life insurance company, made available via [Mendeley Data](https://data.mendeley.com/datasets/sw4jmdb2sm/1). It covers policy years 2022 to 2024 and contains 354,140 policy records across 47 variables, grouped into four domains:
+
+| Domain | Examples |
+|------------------------------------|------------------------------------|
+| Policy & insured characteristics | `policy_type`, `bonus_score`, `payment_frequency` |
+| Driver & vehicle characteristics | `driver_age`, `vehicle_age`, `fuel_type`, `vehicle_brand` |
+| Premiums | `total_premium`, `liability_premium`, coverage-specific premiums |
+| Exposure, claims & incurred costs | `total_claims`, `total_incurred`, `total_exposure` |
+
+------------------------------------------------------------------------
+
+## 3 Data Wrangling
+
+### 3.1 Importing the Data
+
+The dataset uses a semicolon (`;`) as its delimiter. The `read_delim()` function from **readr** is used to import it correctly, specifying the separator explicitly.
+
+```{r}
+#| label: import-data
+insurance <- read_delim(
+  "data/Dataset_of_motor_insurance_portfolio.csv",
+  delim = ";",
+  show_col_types = FALSE
+)
+```
+
+A quick inspection confirms the dimensions and column types:
+
+```{r}
+#| label: inspect-data
+glimpse(insurance)
+```
+
+```{r}
+#| label: check-dimensions
+cat("Rows:", nrow(insurance), "\n")
+cat("Columns:", ncol(insurance), "\n")
+```
+
+### 3.2 Checking for Duplicates and Missing Values
+
+Although this is a structured administrative dataset, due diligence checks are performed for duplicates and missing values.
+
+```{r}
+#| label: check-duplicates
+insurance[duplicated(insurance), ]
+```
+
+```{r}
+#| label: check-missing
+missing_summary <- colSums(is.na(insurance))
+missing_summary[missing_summary > 0]
+```
+
+Four variables contain missing values: `vehicle_age` (2 NAs), `age_driving_licence` (2 NAs), `fuel_type` (1,287 NAs), and `vehicle_value` (513 NAs). As `fuel_type` is used in bivariate analysis, missing rows for that variable are excluded in the relevant plots. For numerical variables, missing values are minimal and treated as not available (NA) without imputation, as they represent less than 0.5% of the dataset.
+
+### 3.3 Recoding Categorical Variables
+
+The categorical variables use abbreviated codes. These are recoded to descriptive labels for readability in charts and interpretations. Ordered factors are used where the variable has a natural order (e.g., `bonus_score`).
+
+```{r}
+#| label: recode-categoricals
+insurance <- insurance |>
+  mutate(
+    policy_type = factor(policy_type,
+      levels = c("TP", "TPG", "CC", "COMP_E", "COMP_N"),
+      labels = c("Third-Party", "TP + Glass", "Combined Cover",
+                 "Comprehensive (Excess)", "Comprehensive (No Excess)")),
+    policy_status = factor(policy_status,
+      levels = c("A", "C"), labels = c("Active", "Cancelled")),
+    business_type = factor(business_type,
+      levels = c("NB", "P"), labels = c("New Business", "Portfolio")),
+    payment_frequency = factor(payment_frequency,
+      levels = c("A", "S", "Q"), labels = c("Annual", "Semi-annual", "Quarterly")),
+    bonus_score = factor(bonus_score,
+      levels = c("G", "N", "B"), labels = c("Good", "Neutral", "Bad"),
+      ordered = TRUE),
+    fuel_type = factor(fuel_type,
+      levels = c("D", "G"), labels = c("Diesel", "Gasoline")),
+    municipality_type = factor(municipality_type,
+      levels = c("I", "C", "IS"), labels = c("Inland", "Coastal", "Islands")),
+    circulation_area = factor(circulation_area,
+      levels = c("U", "R"), labels = c("Urban", "Rural"))
+  )
+```
+
+### 3.4 Deriving Actuarial KPI Variables
+
+The raw dataset contains premiums, claims counts, incurred costs, and exposure, but not the standard actuarial KPIs needed to assess profitability and volatility. These are derived as follows:
+
+| KPI | Formula | Interpretation |
+|---------------------|-------------------------------|----------------------|
+| `loss_ratio` | `total_incurred / total_premium` | Profitability: values \> 1 indicate underwriting losses |
+| `claim_frequency` | `total_claims / total_exposure` | Volatility: claims per policy year |
+| `claim_severity` | `total_incurred / total_claims` (claims \> 0) | Average cost per claim |
+| `pure_premium` | `total_incurred / total_exposure` | Risk cost per policy year |
+| `years_licensed` | `year - age_driving_licence` | Driving experience proxy |
+
+```{r}
+#| label: derive-kpis
+insurance <- insurance |>
+  mutate(
+    loss_ratio      = total_incurred / total_premium,
+    claim_frequency = total_claims / total_exposure,
+    claim_severity  = if_else(total_claims > 0,
+                              total_incurred / total_claims,
+                              NA_real_),
+    pure_premium    = total_incurred / total_exposure,
+    years_licensed  = year - age_driving_licence
+  )
+```
+
+Extreme outliers in `loss_ratio` (driven by policies with near-zero premiums) are capped at the 99th percentile for visualisation purposes, without modifying the underlying data.
+
+```{r}
+#| label: loss-ratio-cap
+lr_cap <- quantile(insurance$loss_ratio, 0.99, na.rm = TRUE)
+
+insurance_viz <- insurance |>
+  mutate(loss_ratio_capped = pmin(loss_ratio, lr_cap))
+```
+
+### 3.5 Creating Driver Age Bands
+
+Driver age is binned into actuarially meaningful bands that reflect typical risk segmentation in motor insurance underwriting.
+
+```{r}
+#| label: age-bands
+insurance_viz <- insurance_viz |>
+  mutate(
+    driver_age_band = cut(driver_age,
+      breaks = c(17, 25, 35, 45, 55, 65, Inf),
+      labels = c("18–25", "26–35", "36–45", "46–55", "56–65", "65+"),
+      right  = TRUE,
+      include.lowest = TRUE)
+  )
+```
+
+------------------------------------------------------------------------
+
+## 4 Exploratory Data Analysis
+
+### 4.1 Univariate Analysis: Numerical Variables
+
+#### 4.1.1 Distribution of Total Premium
+
+The `total_premium` variable is right-skewed, which is typical for insurance pricing data. A histogram with a density overlay is used to reveal the shape of the distribution, while a log scale highlights the spread across orders of magnitude.
+
+```{r}
+#| label: fig-premium-dist
+#| fig-cap: "Distribution of total premium is right-skewed; most policies cluster in the lower premium band."
+#| fig-width: 10
+#| fig-height: 4
+
+p1 <- ggplot(insurance_viz, aes(x = total_premium)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 60, fill = "#4B8BBE", colour = "white", linewidth = 0.2) +
+  geom_density(colour = "#E07B39", linewidth = 1) +
+  labs(title = "Distribution of Total Premium",
+       subtitle = "Linear scale",
+       x = "Total Premium (€)", y = "Density") +
+  scale_x_continuous(labels = comma)
+
+p2 <- ggplot(insurance_viz, aes(x = total_premium)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 60, fill = "#4B8BBE", colour = "white", linewidth = 0.2) +
+  geom_density(colour = "#E07B39", linewidth = 1) +
+  scale_x_log10(labels = comma) +
+  labs(title = "Distribution of Total Premium",
+       subtitle = "Log scale",
+       x = "Total Premium (€, log scale)", y = "Density")
+
+p1 + p2
+```
+
+**Observation**: The distribution is heavily right-skewed on the linear scale. On the log scale, a near-normal distribution emerges, confirming a log-normal data-generating process — consistent with actuarial theory on premium distributions.
+
+#### 4.1.2 Distribution of Driver Age
+
+Driver age is a key risk factor in motor insurance. A histogram with a kernel density curve reveals the age profile of the insured portfolio.
+
+```{r}
+#| label: fig-driver-age-dist
+#| fig-cap: "Driver age distribution peaks in the 40–55 range, with thin tails at young and older ages."
+#| fig-width: 7
+#| fig-height: 4
+
+ggplot(insurance_viz, aes(x = driver_age)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 binwidth = 2, fill = "#5C9E6E", colour = "white", linewidth = 0.2) +
+  geom_density(colour = "#C0392B", linewidth = 1) +
+  labs(title = "Distribution of Driver Age",
+       subtitle = "Portfolio is concentrated in the 35–60 age band",
+       x = "Driver Age (years)", y = "Density")
+```
+
+**Observation**: The portfolio skews toward middle-aged drivers (35–60 years), with a sharp drop-off for drivers under 25. This likely reflects the higher premiums charged to young drivers, which may discourage uptake.
+
+#### 4.1.3 Distribution of Vehicle Age
+
+```{r}
+#| label: fig-vehicle-age-dist
+#| fig-cap: "Vehicle age is positively skewed, with most insured vehicles under 20 years old."
+#| fig-width: 7
+#| fig-height: 4
+
+ggplot(insurance_viz |> filter(!is.na(vehicle_age)), aes(x = vehicle_age)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 binwidth = 1, fill = "#8E6ABF", colour = "white", linewidth = 0.2) +
+  geom_density(colour = "#E07B39", linewidth = 1) +
+  labs(title = "Distribution of Vehicle Age",
+       subtitle = "Most insured vehicles are between 5 and 20 years old",
+       x = "Vehicle Age (years)", y = "Density")
+```
+
+**Observation**: Vehicle age peaks between 5 and 15 years. Very old vehicles (\>25 years) are rarely insured under comprehensive cover, as their declared value (`vehicle_value`) often does not justify the premium.
+
+#### 4.1.4 Zero-Inflated Distribution of Total Claims
+
+Claim counts are zero-inflated: the vast majority of policies record zero claims in any given year. A lollipop chart is used to communicate this clearly.
+
+```{r}
+#| label: fig-claims-dist
+#| fig-cap: "Total claims are overwhelmingly zero; a lollipop chart conveys the zero-inflation clearly."
+#| fig-width: 7
+#| fig-height: 4
+
+claims_count <- insurance_viz |>
+  count(total_claims) |>
+  filter(total_claims <= 6)
+
+ggplot(claims_count, aes(x = factor(total_claims), y = n)) +
+  geom_segment(aes(xend = factor(total_claims), yend = 0),
+               colour = "#4B8BBE", linewidth = 1) +
+  geom_point(size = 4, colour = "#4B8BBE") +
+  scale_y_continuous(labels = comma) +
+  labs(title = "Frequency of Total Claims per Policy",
+       subtitle = "The portfolio is strongly zero-inflated",
+       x = "Number of Claims", y = "Number of Policies")
+```
+
+**Observation**: Approximately 80% of policies record zero claims. The zero-inflated nature of the data is critical to understand when modelling claim frequency and should inform the choice of modelling distributions (e.g., zero-inflated Poisson or negative binomial).
+
+---
+
+### 4.2 Univariate Analysis: Categorical Variables
+
+#### 4.2.1 Portfolio Composition by Policy Type
+
+A ridgeline density plot with quantile shading is used instead of a bar chart to show not merely how many policies exist per type, but how the **total premium** is distributed within each type. This reveals spread, skewness, and multi-modality that a simple count bar would hide. The `stat_density_ridges()` function from **ggridges** with `calc_ecdf = TRUE` and `quantiles = 4` shades each quartile of the distribution in a distinct viridis colour, following the approach in Hands-on Exercise 04A.
+
+```{r}
+#| label: fig-policy-type
+#| fig-cap: "Premium distributions vary sharply by policy type; comprehensive cover spans a much wider premium range than basic third-party."
+#| fig-width: 9
+#| fig-height: 5
+
+ggplot(insurance_viz,
+       aes(x = total_premium,
+           y = fct_reorder(policy_type, total_premium, median),
+           fill = factor(after_stat(quantile)))) +
+  stat_density_ridges(
+    geom          = "density_ridges_gradient",
+    calc_ecdf     = TRUE,
+    quantiles     = 4,
+    quantile_lines = TRUE,
+    bandwidth     = 15,
+    scale         = 2.5,
+    rel_min_height = 0.005
+  ) +
+  scale_fill_viridis_d(name = "Quartile", option = "D", alpha = 0.85) +
+  scale_x_continuous(
+    name   = "Total Premium (€)",
+    labels = comma,
+    expand = c(0, 0),
+    limits = c(0, 2000)
+  ) +
+  scale_y_discrete(
+    name   = "Policy\nType",
+    expand = expansion(add = c(0.3, 2.8))
+  ) +
+  labs(
+    title    = "Premium Distribution by Policy Type",
+    subtitle = "Ridgeline plot with quartile shading; x-axis capped at €2,000 for clarity"
+  ) +
+  theme_ridges(font_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40"),
+    legend.position = "right"
+  )
+```
+
+**Observation**: The ridgeline plot reveals that comprehensive cover policies (both with and without excess) carry the widest premium spread and highest median premiums, while basic third-party (TP) and TP + Glass policies cluster at much lower premium values. The quartile lines show that even within policy types there is substantial within-group variation — information that a count bar chart would entirely obscure.
+
+#### 4.2.2 Distribution of Bonus Score and Its Association with Policy Type
+
+The `bonus_score` variable captures the policyholder's claims history — a fundamental risk classification variable in European motor insurance. Rather than a plain proportion bar chart, `ggbarstats()` from **ggstatsplot** is used here, as demonstrated in Hands-on Exercise 04B. This function produces a stacked proportion chart and automatically annotates it with a **Pearson chi-square test of association**, revealing whether the distribution of bonus scores differs significantly across policy types. This directly answers a richer analytical question: *do policyholders who select different coverage levels have systematically different claims histories?*
+
+```{r}
+#| label: fig-bonus-score
+#| fig-cap: "Bonus score composition differs significantly across policy types; comprehensive cover holders are more likely to carry a Bad bonus score."
+#| fig-width: 10
+#| fig-height: 6
+
+ggbarstats(
+  data             = insurance_viz,
+  x                = bonus_score,
+  y                = policy_type,
+  label            = "both",
+  xlab             = "Policy Type",
+  ylab             = "Proportion",
+  legend.title     = "Bonus Score",
+  title            = "Association Between Bonus Score and Policy Type",
+  subtitle         = "Pearson chi-square test of independence; proportions with sample sizes annotated",
+  palette          = "Set2",
+  ggtheme          = theme_minimal(base_size = 11),
+  ggplot.component = list(
+    theme(
+      plot.title    = element_text(face = "bold", hjust = 0.5, size = 13),
+      plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 10),
+      axis.text.x   = element_text(angle = 20, vjust = 1, hjust = 1)
+    )
+  )
+)
+```
+
+**Observation**: The chi-square test confirms a statistically significant association between bonus score and policy type (p < 0.001). Policyholders holding comprehensive cover without excess (COMP_N) have a notably higher proportion of "Bad" bonus scores compared to basic third-party holders, suggesting that higher-risk individuals self-select into more comprehensive coverage — a phenomenon known as adverse selection. This has direct implications for underwriting pricing strategy.
+
+#### 4.2.3 Portfolio Split by Geography and Circulation Area
+
+Simple bar charts of policy counts by geography do not reveal how **uncertain** or how **variable** the loss experience is across geographic segments — arguably a more useful question for an insurer. Instead, `stat_pointinterval()` from **ggdist** is used to show the median claim frequency per geographic segment alongside simultaneous 95% and 99% confidence intervals, following the approach from Hands-on Exercise 04C. This communicates both the central estimate and the precision of that estimate in a single, compact display.
+
+```{r}
+#| label: fig-geo
+#| fig-cap: "Claim frequency point estimates with 95% and 99% CIs; island and urban policies show higher and more uncertain claim rates."
+#| fig-width: 10
+#| fig-height: 5
+
+geo_ci <- insurance_viz |>
+  filter(total_exposure > 0, claim_frequency < 10)
+
+p_muni <- geo_ci |>
+  ggplot(aes(x = municipality_type, y = claim_frequency)) +
+  stat_pointinterval(
+    .width     = c(0.95, 0.99),
+    point_size = 3,
+    aes(colour = factor(after_stat(.width)))
+  ) +
+  scale_colour_manual(
+    name   = "Confidence\nInterval",
+    values = c("0.95" = "#4B8BBE", "0.99" = "#E07B39"),
+    labels = c("95% CI", "99% CI")
+  ) +
+  labs(
+    title    = "Claim Frequency by Municipality Type",
+    subtitle = "Median point + 95% and 99% CIs",
+    x        = "Municipality Type",
+    y        = "Claim\nFrequency"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40"),
+    legend.position = "right"
+  )
+
+p_circ <- geo_ci |>
+  ggplot(aes(x = circulation_area, y = claim_frequency)) +
+  stat_pointinterval(
+    .width     = c(0.95, 0.99),
+    point_size = 3,
+    aes(colour = factor(after_stat(.width)))
+  ) +
+  scale_colour_manual(
+    name   = "Confidence\nInterval",
+    values = c("0.95" = "#4B8BBE", "0.99" = "#E07B39"),
+    labels = c("95% CI", "99% CI")
+  ) +
+  labs(
+    title    = "Claim Frequency by Circulation Area",
+    subtitle = "Median point + 95% and 99% CIs",
+    x        = "Circulation Area",
+    y        = "Claim\nFrequency"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40"),
+    legend.position = "right"
+  )
+
+p_muni + p_circ +
+  plot_annotation(
+    title = "Geographic Distribution: Claim Frequency with Uncertainty",
+    theme = theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 13))
+  )
+```
+
+**Observation**: Island-based policies show the highest median claim frequency and the widest confidence intervals — reflecting both higher risk and smaller sample size, which inflates estimation uncertainty. Urban policies exhibit higher median claim frequency than rural across all municipality types, consistent with higher accident exposure in densely trafficked environments. The wider CIs for islands versus the narrow CIs for inland policies illustrate why geographic segmentation must account for exposure volume, not just observed rates.
+
+---
+
+### 4.3 Bivariate Analysis: Profitability Drivers
+
+#### 4.3.1 Loss Ratio by Policy Type
+
+A violin plot combined with a boxplot reveals both the distribution shape and key summary statistics of the loss ratio across policy types. Statistical significance is assessed using a Kruskal-Wallis test with pairwise comparisons annotated directly on the chart.
+
+```{r}
+#| label: fig-lr-policy-type
+#| fig-cap: "Loss ratio varies significantly across policy types; comprehensive cover shows greater volatility."
+#| fig-width: 10
+#| fig-height: 5
+
+ggplot(insurance_viz |> filter(loss_ratio_capped > 0, total_exposure > 0),
+       aes(x = policy_type, y = loss_ratio_capped, fill = policy_type)) +
+  geom_violin(alpha = 0.4, trim = TRUE, show.legend = FALSE) +
+  geom_boxplot(width = 0.15, outlier.shape = NA, show.legend = FALSE,
+               fill = "white", colour = "grey40") +
+  stat_compare_means(method = "kruskal.test",
+                     label.x = 1.2, label.y = max(insurance_viz$loss_ratio_capped, na.rm = TRUE) * 0.95) +
+  scale_fill_viridis_d(option = "D") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 12)) +
+  labs(title = "Loss Ratio by Policy Type",
+       subtitle = "Kruskal-Wallis test for group differences; policies with zero claims excluded",
+       x = "Policy Type", y = "Loss\nRatio")
+```
+
+**Observation**: Comprehensive cover policies (particularly those without excess) exhibit higher median loss ratios and wider distributions, reflecting greater exposure to claim frequency and larger claim amounts. The Kruskal-Wallis test confirms statistically significant differences in loss ratio across policy types (p < 0.05).
+
+#### 4.3.2 Loss Ratio by Bonus Score
+
+Bonus score is a direct actuarial signal of policyholder risk. Its relationship with loss ratio should be monotonic if the scoring system is predictive.
+
+```{r}
+#| label: fig-lr-bonus
+#| fig-cap: "Policyholders with a Bad bonus score show materially higher and more volatile loss ratios."
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(insurance_viz |> filter(loss_ratio_capped > 0),
+       aes(x = bonus_score, y = loss_ratio_capped, fill = bonus_score)) +
+  stat_halfeye(adjust = 0.5, justification = -0.2, .width = 0,
+               point_colour = NA, alpha = 0.6) +
+  geom_boxplot(width = 0.15, outlier.shape = NA, fill = "white", colour = "grey40") +
+  stat_compare_means(comparisons = list(c("Good", "Bad"), c("Good", "Neutral"), c("Neutral", "Bad")),
+                     method = "wilcox.test", label = "p.signif") +
+  scale_fill_manual(values = c("Good" = "#5C9E6E", "Neutral" = "#F0C27F", "Bad" = "#C0392B")) +
+  labs(title = "Loss Ratio by Bonus Score",
+       subtitle = "Half-eye + boxplot; pairwise Wilcoxon tests annotated",
+       x = "Bonus Score", y = "Loss\nRatio") +
+  theme(legend.position = "none")
+```
+
+**Observation**: The loss ratio increases monotonically from Good to Bad bonus score, validating the bonus system's actuarial predictiveness. Policyholders with a "Bad" score not only have higher median loss ratios but also a heavier right tail, indicating they are associated with disproportionately large individual losses.
+
+#### 4.3.3 Loss Ratio by Circulation Area and Municipality
+
+Building on the uncertainty approach introduced in Section 4.2.3, `stat_pointinterval()` is again used here to show the median loss ratio and its 95%/99% CIs across each municipality–circulation area combination. This replaces the grouped bar chart of summary medians, which conveyed a false sense of precision by showing single values with no indication of uncertainty.
+
+```{r}
+#| label: fig-lr-geo
+#| fig-cap: "Island urban policies show the highest loss ratio estimates with the widest uncertainty; inland rural is the most stable segment."
+#| fig-width: 10
+#| fig-height: 5
+
+insurance_viz |>
+  filter(loss_ratio_capped > 0, total_exposure > 0) |>
+  mutate(geo_segment = paste0(municipality_type, "\n(", circulation_area, ")")) |>
+  ggplot(aes(x = reorder(geo_segment, loss_ratio_capped, median),
+             y = loss_ratio_capped)) +
+  stat_pointinterval(
+    .width     = c(0.95, 0.99),
+    point_size = 3,
+    aes(colour = factor(after_stat(.width)))
+  ) +
+  scale_colour_manual(
+    name   = "Confidence\nInterval",
+    values = c("0.95" = "#4B8BBE", "0.99" = "#E07B39"),
+    labels = c("95% CI", "99% CI")
+  ) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50", linewidth = 0.7) +
+  annotate("text", x = 0.6, y = 1.03, label = "Break-even (LR = 1)",
+           size = 3, colour = "grey50", hjust = 0) +
+  labs(
+    title    = "Loss Ratio by Geographic Segment",
+    subtitle = "Median point + 95% and 99% CIs; segments ordered by median loss ratio",
+    x        = "Geographic Segment\n(Municipality × Circulation Area)",
+    y        = "Loss\nRatio"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40"),
+    legend.position = "right"
+  )
+```
+
+**Observation**: Urban policies record higher median loss ratios than rural equivalents across all municipality types, consistent with higher accident frequency in congested environments. Critically, the confidence intervals for island segments are substantially wider than for inland segments — reflecting smaller sample sizes and greater inherent volatility. This means that while island policies *appear* to have the highest loss ratios, there is considerably more uncertainty in that estimate, and underwriting decisions for that segment should account for this parameter uncertainty.
+
+---
+
+### 4.4 Bivariate Analysis: Volatility Drivers
+
+#### 4.4.1 Claim Frequency by Driver Age Band
+
+A GAM smoother (generalised additive model) is overlaid on a scatter plot of claim frequency against driver age to reveal non-linear risk patterns that linear regression would miss.
+
+```{r}
+#| label: fig-freq-age
+#| fig-cap: "Claim frequency follows a U-shaped curve with driver age, highest for youngest and oldest drivers."
+#| fig-width: 9
+#| fig-height: 5
+
+insurance_viz |>
+  filter(total_exposure > 0, claim_frequency < 10) |>
+  ggplot(aes(x = driver_age, y = claim_frequency)) +
+  geom_hex(bins = 50, aes(fill = after_stat(log(count))), show.legend = TRUE) +
+  geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs"),
+              colour = "#C0392B", linewidth = 1.2, se = TRUE) +
+  scale_fill_viridis_c(name = "log(count)", option = "magma") +
+  labs(title = "Claim Frequency vs Driver Age",
+       subtitle = "GAM smooth with 95% CI; hex density shows data concentration",
+       x = "Driver Age (years)", y = "Claim\nFrequency")
+```
+
+**Observation**: The GAM smoother reveals a U-shaped relationship: young drivers (under 25) and older drivers (over 65) exhibit higher claim frequencies. The 35–55 age band represents the lowest-risk segment — a finding consistent with actuarial pricing conventions across European motor insurance markets.
+
+#### 4.4.2 Claim Frequency by Vehicle Age Band
+
+```{r}
+#| label: fig-freq-vehicle-age
+#| fig-cap: "Newer vehicles tend to record lower claim frequency, though very old vehicles also show reduced frequency."
+#| fig-width: 9
+#| fig-height: 5
+
+insurance_viz |>
+  filter(!is.na(vehicle_age), total_exposure > 0, claim_frequency < 10) |>
+  ggplot(aes(x = vehicle_age, y = claim_frequency)) +
+  geom_point(alpha = 0.05, colour = "#4B8BBE") +
+  geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs"),
+              colour = "#E07B39", linewidth = 1.2, se = TRUE) +
+  labs(title = "Claim Frequency vs Vehicle Age",
+       subtitle = "GAM smooth with 95% CI",
+       x = "Vehicle Age (years)", y = "Claim\nFrequency")
+```
+
+**Observation**: Newer vehicles (under 5 years) tend to have lower claim frequencies, likely reflecting the higher proportion of experienced drivers who purchase new vehicles. A slight increase is observed for vehicles aged 10–20 years, potentially reflecting higher mechanical vulnerability and older associated driver profiles.
+
+#### 4.4.3 Claim Severity by Fuel Type
+
+```{r}
+#| label: fig-severity-fuel
+#| fig-cap: "Diesel vehicles exhibit higher claim severity than gasoline vehicles on average."
+#| fig-width: 8
+#| fig-height: 5
+
+insurance_viz |>
+  filter(!is.na(claim_severity), !is.na(fuel_type)) |>
+  ggplot(aes(x = fuel_type, y = claim_severity, fill = fuel_type)) +
+  stat_halfeye(adjust = 0.5, justification = -0.2, .width = 0,
+               point_colour = NA, alpha = 0.6) +
+  geom_boxplot(width = 0.15, outlier.shape = NA, fill = "white", colour = "grey40") +
+  stat_compare_means(method = "wilcox.test", label = "p.format",
+                     label.x = 1.5, label.y.npc = 0.9) +
+  scale_fill_manual(values = c("Diesel" = "#4B8BBE", "Gasoline" = "#E07B39")) +
+  scale_y_log10(labels = comma) +
+  labs(title = "Claim Severity by Fuel Type",
+       subtitle = "Log-scaled y-axis; Wilcoxon test for group difference",
+       x = "Fuel Type", y = "Claim\nSeverity (€, log)") +
+  theme(legend.position = "none")
+```
+
+**Observation**: Diesel vehicles exhibit statistically higher claim severity than gasoline vehicles (Wilcoxon p < 0.05). This may reflect the higher vehicle values and greater cost of parts for diesel models, which tend to be larger family cars and commercial vehicles.
+
+---
+
+### 4.5 Temporal Analysis: 2022–2024 Trends
+
+#### 4.5.1 Portfolio Growth and Premium Trends
+
+```{r}
+#| label: fig-temporal
+#| fig-cap: "Policy count and average premium both grew over 2022–2024, indicating portfolio expansion."
+#| fig-width: 10
+#| fig-height: 4
+
+trend_data <- insurance_viz |>
+  group_by(year) |>
+  summarise(
+    policy_count  = n(),
+    avg_premium   = mean(total_premium, na.rm = TRUE),
+    avg_loss_ratio = mean(loss_ratio_capped, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+t1 <- ggplot(trend_data, aes(x = year, y = policy_count)) +
+  geom_line(colour = "#4B8BBE", linewidth = 1.2) +
+  geom_point(size = 3, colour = "#4B8BBE") +
+  scale_y_continuous(labels = comma) +
+  labs(title = "Policy Count by Year", x = "Year", y = "Policy\nCount")
+
+t2 <- ggplot(trend_data, aes(x = year, y = avg_premium)) +
+  geom_line(colour = "#5C9E6E", linewidth = 1.2) +
+  geom_point(size = 3, colour = "#5C9E6E") +
+  scale_y_continuous(labels = comma) +
+  labs(title = "Average Premium by Year", x = "Year", y = "Avg Premium\n(€)")
+
+t3 <- ggplot(trend_data, aes(x = year, y = avg_loss_ratio)) +
+  geom_line(colour = "#C0392B", linewidth = 1.2) +
+  geom_point(size = 3, colour = "#C0392B") +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
+  labs(title = "Average Loss Ratio by Year",
+       subtitle = "Dashed line = break-even",
+       x = "Year", y = "Avg Loss\nRatio")
+
+t1 + t2 + t3
+```
+
+**Observation**: Policy count and average premium increased year-on-year over 2022–2024, suggesting portfolio growth. The average loss ratio dipped below 1 in the most recent year, indicating improving aggregate profitability — though significant cross-segment variation persists as shown in previous sections.
+
+#### 4.5.2 Year-over-Year Loss Ratio by Policy Type
+
+```{r}
+#| label: fig-lr-temporal-facet
+#| fig-cap: "Loss ratio trends vary markedly by policy type; comprehensive cover shows the most volatility."
+#| fig-width: 11
+#| fig-height: 5
+
+insurance_viz |>
+  filter(total_exposure > 0, total_premium > 0) |>
+  group_by(year, policy_type) |>
+  summarise(median_lr = median(loss_ratio_capped, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(x = year, y = median_lr, colour = policy_type, group = policy_type)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5) +
+  facet_wrap(~policy_type, nrow = 1, scales = "free_y") +
+  scale_colour_viridis_d(option = "D") +
+  labs(title = "Median Loss Ratio by Year and Policy Type",
+       subtitle = "Faceted to reveal segment-level trends independently",
+       x = "Year", y = "Median\nLoss Ratio") +
+  theme(legend.position = "none",
+        strip.text = element_text(size = 9))
+```
+
+**Observation**: Loss ratio trends diverge meaningfully by policy type over the three-year window. Comprehensive cover without excess (COMP_N) exhibits the highest volatility year-on-year, while basic third-party (TP) remains the most stable. This has implications for reserving and pricing review cycles.
+
+---
+
+### 4.6 Bonus: Correlation Heatmap of Premium and Incurred Variables
+
+Beyond the analytical methods taught in class, a correlation heatmap is used to examine the multivariate structure of premium and incurred cost variables simultaneously. This visual analytics technique identifies co-dependency between coverage lines that would be invisible in pairwise bivariate analysis.
+
+```{r}
+#| label: fig-corr-heatmap
+#| fig-cap: "Strong correlations between premium components reflect the bundled nature of comprehensive cover."
+#| fig-width: 9
+#| fig-height: 8
+
+corr_vars <- insurance_viz |>
+  select(total_premium, liability_premium, property_damage_premium,
+         theft_premium, fire_premium, glass_premium,
+         total_incurred, liability_incurred, property_incurred,
+         theft_incurred, fire_incurred, glass_incurred) |>
+  drop_na()
+
+corr_matrix <- cor(corr_vars, method = "spearman")
+
+ggcorrplot(corr_matrix,
+           method  = "square",
+           type    = "lower",
+           lab     = TRUE,
+           lab_size = 2.8,
+           colors  = c("#C0392B", "white", "#2E86C1"),
+           title   = "Spearman Correlation: Premium and Incurred Variables",
+           ggtheme = theme_minimal(base_size = 11)) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+```
+
+**Observation**: Premium components are highly correlated with one another — a natural consequence of comprehensive policies bundling multiple coverages, so that a policy with high total premium will also have high sub-premiums across lines. On the incurred side, correlations are lower and more variable, reflecting the independence of individual claim events across coverage lines. The low correlation between incurred and premium variables highlights that premium adequacy varies across coverage types.
+
+---
+
+### 4.7 Bonus: Interactive Loss Ratio Explorer with ggiraph
+
+Rather than converting a static ggplot2 bar chart to plotly, **ggiraph** is used here to produce a richer interactive experience that keeps the full ggplot2 grammar intact. Following the techniques from Hands-on Exercise 03A, `geom_col_interactive()` is used so that each bar carries a detailed **tooltip** (shown on hover) and a **data_id** (used for hover highlighting) — elements associated with the same bonus score are simultaneously highlighted across all bars when the mouse moves over any one of them.
+
+```{r}
+#| label: fig-interactive-lr
+#| fig-cap: "Interactive ggiraph chart: hover any bar to see precise statistics and highlight all bars of that bonus score group simultaneously."
+
+tooltip_css <- "background-color: white; font-style: bold; color: black;
+                border: 1px solid #cccccc; padding: 6px; border-radius: 4px;"
+
+lr_summary <- insurance_viz |>
+  filter(loss_ratio_capped > 0, total_exposure > 0) |>
+  group_by(policy_type, bonus_score) |>
+  summarise(
+    median_lr = median(loss_ratio_capped, na.rm = TRUE),
+    mean_lr   = mean(loss_ratio_capped, na.rm = TRUE),
+    n         = n(),
+    .groups   = "drop"
+  ) |>
+  mutate(
+    tooltip_text = paste0(
+      "Policy type: ",  policy_type,  "\n",
+      "Bonus score: ",  bonus_score,  "\n",
+      "Median LR: ",    round(median_lr, 3), "\n",
+      "Mean LR: ",      round(mean_lr, 3),   "\n",
+      "N policies: ",   comma(n)
+    )
+  )
+
+p_interactive <- ggplot(
+  lr_summary,
+  aes(x    = policy_type,
+      y    = median_lr,
+      fill = bonus_score)
+) +
+  geom_col_interactive(
+    aes(tooltip  = tooltip_text,
+        data_id  = bonus_score),
+    position = position_dodge(width = 0.75),
+    width    = 0.7
+  ) +
+  scale_fill_manual(
+    values = c("Good" = "#5C9E6E", "Neutral" = "#F0C27F", "Bad" = "#C0392B"),
+    name   = "Bonus Score"
+  ) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = number_format(accuracy = 0.01)) +
+  labs(
+    title    = "Median Loss Ratio by Policy Type and Bonus Score",
+    subtitle = "Hover a bar to inspect statistics; bars of the same bonus score highlight together",
+    x        = "Policy Type",
+    y        = "Median\nLoss Ratio"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40"),
+    legend.position = "bottom"
+  )
+
+girafe(
+  ggobj      = p_interactive,
+  width_svg  = 9,
+  height_svg = 9 * 0.55,
+  options    = list(
+    opts_tooltip(css = tooltip_css),
+    opts_hover(css      = "fill-opacity: 1; stroke: #333333; stroke-width: 1.5px;"),
+    opts_hover_inv(css  = "opacity: 0.25;")
+  )
+)
+```
+
+**Observation**: The interactive chart confirms the combined effect of policy type and bonus score on loss ratio. Hovering over any bar surfaces the exact median and mean loss ratio, alongside the number of underlying policies. The linked hover — where all bars of the same bonus score are highlighted simultaneously — makes it easy to trace the "Bad" bonus score band across all five policy types at once: it consistently records the highest median loss ratio regardless of policy type, with the "Bad / Comprehensive (No Excess)" combination representing the highest-risk segment in the portfolio.
+
+---
+
+## 5 Conclusion
+
+This exercise demonstrates the value of visual analytics for insurance portfolio investigation. Through a combination of univariate, bivariate, and temporal techniques implemented in **ggplot2** and its extensions, several key insights emerged:
+
+- The portfolio is dominated by middle-aged drivers on inland urban policies holding comprehensive cover. The premium distribution across policy types — revealed through ridgeline density plots rather than simple counts — shows that comprehensive cover not only dominates in volume but also spans a far wider premium range than basic cover.
+- A statistically significant association exists between bonus score and policy type (chi-square, p < 0.001), suggesting adverse selection: higher-risk policyholders disproportionately hold more comprehensive coverage.
+- Loss ratio is significantly influenced by **policy type**, **bonus score**, and **geography**. Critically, the use of `stat_pointinterval()` uncertainty charts (rather than bar charts of summary medians) revealed that island segment loss ratio estimates carry substantially wider confidence intervals — meaning segment-level decisions must account for estimation uncertainty, not just observed rates.
+- **Claim frequency** follows a U-shaped curve with driver age, confirming the actuarial basis for age-based risk pricing. **Claim severity** is statistically higher for diesel vehicles.
+- Premium and incurred components are structurally correlated, but the weak premium-to-incurred correlations suggest pricing inadequacy in specific coverage lines.
+- Temporal analysis reveals year-on-year portfolio growth alongside improving aggregate profitability, though segment-level volatility remains high for comprehensive cover.
+
+These insights provide a foundation for more targeted underwriting strategy, pricing refinement, and reserving review. Future work could enrich this analysis with external geospatial data and predictive modelling of individual loss ratios.
+
+---
+
+## 6 Key References
+
+-   [R for Visual Analytics](https://r4va.netlify.app/)
+
+-   [R for Data Science (2nd ed.)](https://r4ds.hadley.nz/)
+
+-   [Fundamentals of Data Visualisation](https://clauswilke.com/dataviz/)
+
+-   [ggplot2 Extensions Gallery](https://exts.ggplot2.tidyverse.org/gallery/)
+
+-   [ggridges: Ridgeline Plots in ggplot2](https://wilkelab.org/ggridges/)
+
+-   [ggdist: Visualizations of Distributions and Uncertainty](https://mjskay.github.io/ggdist/)
+
+-   [ggstatsplot: ggplot2 Based Plots with Statistical Details](https://indrajeetpatil.github.io/ggstatsplot/)
+
+-   [ggiraph: Make ggplot2 Graphics Interactive](https://davidgohel.github.io/ggiraph/)
+
+-   Swiss Re Institute. (2019). [Advanced analytics: unlocking new frontiers in P&C insurance](https://www.swissre.com/dam/jcr:3257ef4b-fe20-45e2-9700-7677702407af/sigma4_2019_en.pdf). *sigma No. 4/2019*.
+
+-   Mendeley Data. Motor Vehicle Insurance Portfolio Dataset. <https://data.mendeley.com/datasets/sw4jmdb2sm/1>
+
+**~~~ End of Take-home Exercise 01 ~~~**
