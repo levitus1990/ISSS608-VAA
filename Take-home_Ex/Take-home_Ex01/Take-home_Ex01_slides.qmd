@@ -186,7 +186,7 @@ A visual analytics investigation of **354,140 motor insurance policies** from a 
 :::
 
 ::: {style="font-size:0.90em; margin-top:4px; padding:5px 10px; background:#fef9e7; border-left:3px solid #e67e22; border-radius:3px;"}
-Also: NB carries 2× adverse risk vs portfolio renewals · Bad-score policyholders: 75% retention · Urban \> Rural loss ratios · Island pricing statistically unreliable
+Also: New Businesses carries 2× adverse risk vs portfolio renewals +++ Bad-score policyholders: 75% retention +++ Urban \> Rural loss ratios +++ Island pricing statistically unreliable
 :::
 :::::
 
@@ -242,7 +242,7 @@ ggplot(kpi_df, aes(x = metric, y = pct, fill = category)) +
 :::
 
 ::: {style="font-size:0.90em; margin-top:5px; padding:5px 10px; background:#eaf3fb; border-left:3px solid #2980b9; border-radius:3px;"}
-**Principle:** Every wrangling decision is documented at the point of use: not globally applied,so the audit trail is always traceable.
+**Principle:** Every wrangling decision is documented at the point of use and not globally applied. This is to make the audit trail always traceable.
 :::
 :::::
 
@@ -283,14 +283,14 @@ ggplot(missing_df, aes(x = variable, y = missing, fill = high)) +
 ::::::: columns
 ::::: {.column width="50%"}
 :::: {style="font-size:0.90em; line-height:1.35;"}
-**Why raw data is insufficient:** The dataset has premiums, claims, incurred costs, and exposure; but none of the actuarial metrics needed to assess profitability or volatility. Six KPIs were derived as the analytical backbone.
+**Why raw data is insufficient:** The dataset has premiums, claims, incurred costs, and exposure but none of the actuarial metrics needed to assess profitability or volatility. Six KPIs were derived as the analytical backbone.
 
-**Exposure-adjustment is non-negotiable:** A 3-month policy and a 12-month policy generate the same raw claim count for zero incidents. `total_exposure` (policy years) normalises all KPIs; without it, short-duration segments appear artificially safer.
+**Exposure-adjustment is non-negotiable:** A 3-month policy and a 12-month policy generate the same raw claim count for zero incidents. `total_exposure` (policy years) normalises all KPIs. Without it, short-duration segments appear artificially safer.
 
 **Demographic variables tested:** `years_licensed` and `licence_age` were derived to test whether driving experience predicts risk better than age.
 
 ::: {style="padding:5px 10px; background:#fdf2f8; border-left:3px solid #c0392b; border-radius:3px;"}
-⚠️ **Data quality finding:** Both variables showed near-zero Spearman ρ with claim frequency; because `age_driving_licence` records the *calendar year* of licence issue, not years of experience. `years_licensed` is invalid as derived and requires re-specification before use in any model.
+⚠️ **Data quality finding:** Both variables showed near-zero Spearman ρ with claim frequency because `age_driving_licence` records the *calendar year* of licence issue, and not years of experience. `years_licensed` is invalid as derived and requires re-specification before use in any model.
 :::
 ::::
 :::::
@@ -332,10 +332,10 @@ knitr::kable(kpi_tbl, format = "html", escape = FALSE,
 
 ## Slide 4 \| Analyses Overview: Univariate
 
-::: {style="font-size:0.90em;"}
+::: {style="font-size:0.70em;"}
 | \# | Analysis | Chart Type | Rationale |
-|:---|:---|:---|:---|
-| 4.1 | Portfolio composition by policy type | `ggbarstats()` + Pearson χ² | Plain bar only answers *how many*; `ggbarstats()` tests whether bonus score composition differs significantly across types |
+|:-----------------|:-----------------|:-----------------|:-----------------|
+| 4.1 | Portfolio composition by policy type | `ggbarstats()` + Pearson χ² | Plain bar only answers *how many*. `ggbarstats()` tests whether bonus score composition differs significantly across types |
 | 4.2 | Bonus score by business type | `ggbarstats()` + Pearson χ² | Tests whether new business carries materially worse risk profile than portfolio renewals |
 | 4.3 | Geographic distribution | Stacked 100% bar + count labels | Proportions **and** absolute volumes both matter; pure proportions hide the Islands segment's thin \~24,000-policy base |
 | 4.4 | Distribution of vehicle age | Histogram + density overlay | Right-skewed integer variable; density curve smooths the empirical shape |
@@ -343,7 +343,7 @@ knitr::kable(kpi_tbl, format = "html", escape = FALSE,
 | 4.6 | Distribution of driver age | Histogram + density + reference lines | Reference lines at 25 and 65 make actuarial risk thresholds immediately visible |
 :::
 
-::: {style="font-size:0.90em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
+::: {style="font-size:0.70em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
 **Guiding principle:** Chart type is determined by the question, not convention. `ggbarstats()` replaces plain bars for categorical variables because the chi-square test is the primary analytical question. Log scale for vehicle value is a statistical necessity, not a stylistic choice.
 :::
 
@@ -351,9 +351,9 @@ knitr::kable(kpi_tbl, format = "html", escape = FALSE,
 
 ## Slide 5 \| Analyses Overview: Bivariate
 
-::: {style="font-size:0.85em;"}
+::: {style="font-size:0.6em;"}
 | Domain | Analysis | Chart | Rationale |
-|:---|:---|:---|:---|
+|:-----------------|:-----------------|:-----------------|:-----------------|
 | Conventional | Loss ratio by policy type | Violin + boxplot + Kruskal-Wallis | Reveals multi-modality; non-parametric for skewed data |
 | Conventional | Loss ratio by bonus score | `stat_halfeye` + Wilcoxon pairwise | Tests monotonic Good→Bad ordering statistically |
 | Conventional | Severity by fuel type | `stat_halfeye` + Wilcoxon (log) | Log scale mandatory; distinguishes location shift vs tail effect |
@@ -436,7 +436,7 @@ ggplot(nb_data,
 :::::
 
 ::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
-**Interpretation:** χ² (p \< 0.001) confirms bonus composition is not independent of policy type. **COMP_N carries 3.5% Bad-score policyholders**; nearly 3× the rate of other types, textbook adverse selection. **New Business carries 2× the Bad-score rate of Portfolio renewals** (1.6% vs 0.8%), confirming the acquisition channel absorbs materially worse risk before renewal underwriting filters apply.
+**Interpretation:** χ² (p \< 0.001) confirms bonus composition is not independent of policy type. **COMP_N carries 3.5% Bad-score policyholders**; nearly 3× the rate of other types, a textbook case of adverse selection. **New Business carries 2× the Bad-score rate of Portfolio renewals** (1.6% vs 0.8%), confirming the acquisition channel absorbs materially worse risk before renewal underwriting filters apply.
 :::
 
 ------------------------------------------------------------------------
@@ -506,7 +506,7 @@ p_vage + p_vval
 :::::
 
 ::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
-**Interpretation:** Islands has only \~24,000 policies; too few for statistically reliable loss ratio estimates (wide CIs confirmed in Slide 14). Vehicle age is right-skewed (mode 20–25 yrs), indicating an older fleet where the non-linear severity curve applies at both extremes. Vehicle value is log-normally distributed (median €24,700)which makes log scale is mandatory; linear scale compresses the modal range into an unreadable sliver.
+**Interpretation:** Islands has only \~24,000 policies which makes it too few for statistically reliable loss ratio estimates (wide CIs confirmed in Slide 14). Vehicle age is right-skewed (mode 20–25 yrs), indicating an older fleet where the non-linear severity curve applies at both extremes. Vehicle value is log-normally distributed (median €24,700) making log scale mandatory as linear scale will compress the modal range into an unreadable sliver.
 :::
 
 ------------------------------------------------------------------------
@@ -548,10 +548,10 @@ ggplot(insurance_viz, aes(x = driver_age)) +
 
 :::: {.column width="44%"}
 ::: {style="font-size:0.90em; line-height:1.35;"}
-**Portfolio is concentrated in the 35–60 band**; the actuarially safest segment.
+**Portfolio is concentrated in the 35–60 band**.
 
--   **Under-25 drivers** are markedly under-represented; higher premiums deter uptake, meaning the insurer attracts only the least price-sensitive young drivers
--   **Over-65 drivers** taper naturally with licence cessation
+-   **Under-25 drivers** are markedly under-represented.
+-   **Over-65 drivers** taper naturally with licence cessation.
 
 **Statistical implication:** The U-shaped age–risk relationship (young and old drivers claiming more) is well established. However, because both risk extremes are *thinly populated* here, the age signal is statistically diluted; explaining why the Spearman ρ between driver age and claim frequency is near-zero (−0.035) in Slide 12. This is a portfolio composition effect, not evidence that age is irrelevant to risk.
 :::
@@ -566,7 +566,7 @@ ggplot(insurance_viz, aes(x = driver_age)) +
 ::::: {.column width="52%"}
 ::: {style="font-size:0.90em;"}
 | Variable | Pattern | Implication |
-|:---|:---|:---|
+|:-----------------------|:-----------------------|:-----------------------|
 | **Policy type** | COMP_N: 3.5% Bad; TP: 1.6% | Adverse selection in comp. cover |
 | **Business type** | NB: 1.6% Bad vs 0.8% Portfolio | Acquisition absorbs worse risk |
 | **Municipality** | Islands: n ≈ 24,000 only | Estimates unreliable; need uncertainty buffer |

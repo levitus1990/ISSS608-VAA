@@ -161,7 +161,7 @@ Ang Ming Kwan
 <p>🟠 <strong>Glass claims are gateway events</strong>: bimodal frequency at 1–2 events/year confirms co-occurrence with broader claims; validates glass history as a renewal risk flag</p>
 </div>
 <div style="font-size:0.90em; margin-top:4px; padding:5px 10px; background:#fef9e7; border-left:3px solid #e67e22; border-radius:3px;">
-<p>Also: NB carries 2× adverse risk vs portfolio renewals · Bad-score policyholders: 75% retention · Urban &gt; Rural loss ratios · Island pricing statistically unreliable</p>
+<p>Also: New Businesses carries 2× adverse risk vs portfolio renewals +++ Bad-score policyholders: 75% retention +++ Urban &gt; Rural loss ratios +++ Island pricing statistically unreliable</p>
 </div>
 </div><div class="column" style="width:42%;">
 <div class="cell">
@@ -187,7 +187,7 @@ Ang Ming Kwan
 <p><strong>Binning:</strong> Driver/vehicle age binned into actuarial bands. Vehicle brands classified into three tiers. <code>claim_breadth</code> (number of distinct claim lines per policy) derived as a behavioural signal variable.</p>
 </div>
 <div style="font-size:0.90em; margin-top:5px; padding:5px 10px; background:#eaf3fb; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Principle:</strong> Every wrangling decision is documented at the point of use: not globally applied,so the audit trail is always traceable.</p>
+<p><strong>Principle:</strong> Every wrangling decision is documented at the point of use and not globally applied. This is to make the audit trail always traceable.</p>
 </div>
 </div><div class="column" style="width:45%;">
 <div class="cell">
@@ -209,11 +209,11 @@ Ang Ming Kwan
 <div class="columns">
 <div class="column" style="width:50%;">
 <div style="font-size:0.90em; line-height:1.35;">
-<p><strong>Why raw data is insufficient:</strong> The dataset has premiums, claims, incurred costs, and exposure; but none of the actuarial metrics needed to assess profitability or volatility. Six KPIs were derived as the analytical backbone.</p>
-<p><strong>Exposure-adjustment is non-negotiable:</strong> A 3-month policy and a 12-month policy generate the same raw claim count for zero incidents. <code>total_exposure</code> (policy years) normalises all KPIs; without it, short-duration segments appear artificially safer.</p>
+<p><strong>Why raw data is insufficient:</strong> The dataset has premiums, claims, incurred costs, and exposure but none of the actuarial metrics needed to assess profitability or volatility. Six KPIs were derived as the analytical backbone.</p>
+<p><strong>Exposure-adjustment is non-negotiable:</strong> A 3-month policy and a 12-month policy generate the same raw claim count for zero incidents. <code>total_exposure</code> (policy years) normalises all KPIs. Without it, short-duration segments appear artificially safer.</p>
 <p><strong>Demographic variables tested:</strong> <code>years_licensed</code> and <code>licence_age</code> were derived to test whether driving experience predicts risk better than age.</p>
 <div style="padding:5px 10px; background:#fdf2f8; border-left:3px solid #c0392b; border-radius:3px;">
-<p>⚠️ <strong>Data quality finding:</strong> Both variables showed near-zero Spearman ρ with claim frequency; because <code>age_driving_licence</code> records the <em>calendar year</em> of licence issue, not years of experience. <code>years_licensed</code> is invalid as derived and requires re-specification before use in any model.</p>
+<p>⚠️ <strong>Data quality finding:</strong> Both variables showed near-zero Spearman ρ with claim frequency because <code>age_driving_licence</code> records the <em>calendar year</em> of licence issue, and not years of experience. <code>years_licensed</code> is invalid as derived and requires re-specification before use in any model.</p>
 </div>
 </div>
 </div><div class="column" style="width:50%;">
@@ -266,7 +266,7 @@ Ang Ming Kwan
 </section>
 <section id="slide-4-analyses-overview-univariate" class="slide level2">
 <h2>Slide 4 | Analyses Overview: Univariate</h2>
-<div style="font-size:0.90em;">
+<div style="font-size:0.70em;">
 <table class="caption-top">
 <colgroup>
 <col style="width: 25%">
@@ -287,7 +287,7 @@ Ang Ming Kwan
 <td style="text-align: left;">4.1</td>
 <td style="text-align: left;">Portfolio composition by policy type</td>
 <td style="text-align: left;"><code>ggbarstats()</code> + Pearson χ²</td>
-<td style="text-align: left;">Plain bar only answers <em>how many</em>; <code>ggbarstats()</code> tests whether bonus score composition differs significantly across types</td>
+<td style="text-align: left;">Plain bar only answers <em>how many</em>. <code>ggbarstats()</code> tests whether bonus score composition differs significantly across types</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">4.2</td>
@@ -322,13 +322,13 @@ Ang Ming Kwan
 </tbody>
 </table>
 </div>
-<div style="font-size:0.90em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
+<div style="font-size:0.70em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
 <p><strong>Guiding principle:</strong> Chart type is determined by the question, not convention. <code>ggbarstats()</code> replaces plain bars for categorical variables because the chi-square test is the primary analytical question. Log scale for vehicle value is a statistical necessity, not a stylistic choice.</p>
 </div>
 </section>
 <section id="slide-5-analyses-overview-bivariate" class="slide level2">
 <h2>Slide 5 | Analyses Overview: Bivariate</h2>
-<div style="font-size:0.85em;">
+<div style="font-size:0.6em;">
 <table class="caption-top">
 <colgroup>
 <col style="width: 25%">
@@ -476,7 +476,7 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>Interpretation:</strong> χ² (p &lt; 0.001) confirms bonus composition is not independent of policy type. <strong>COMP_N carries 3.5% Bad-score policyholders</strong>; nearly 3× the rate of other types, textbook adverse selection. <strong>New Business carries 2× the Bad-score rate of Portfolio renewals</strong> (1.6% vs 0.8%), confirming the acquisition channel absorbs materially worse risk before renewal underwriting filters apply.</p>
+<p><strong>Interpretation:</strong> χ² (p &lt; 0.001) confirms bonus composition is not independent of policy type. <strong>COMP_N carries 3.5% Bad-score policyholders</strong>; nearly 3× the rate of other types, a textbook case of adverse selection. <strong>New Business carries 2× the Bad-score rate of Portfolio renewals</strong> (1.6% vs 0.8%), confirming the acquisition channel absorbs materially worse risk before renewal underwriting filters apply.</p>
 </div>
 </section>
 <section id="slide-7-univariate-geographic-vehicle-distributions" class="slide level2">
@@ -504,7 +504,7 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Interpretation:</strong> Islands has only ~24,000 policies; too few for statistically reliable loss ratio estimates (wide CIs confirmed in Slide 14). Vehicle age is right-skewed (mode 20–25 yrs), indicating an older fleet where the non-linear severity curve applies at both extremes. Vehicle value is log-normally distributed (median €24,700)which makes log scale is mandatory; linear scale compresses the modal range into an unreadable sliver.</p>
+<p><strong>Interpretation:</strong> Islands has only ~24,000 policies which makes it too few for statistically reliable loss ratio estimates (wide CIs confirmed in Slide 14). Vehicle age is right-skewed (mode 20–25 yrs), indicating an older fleet where the non-linear severity curve applies at both extremes. Vehicle value is log-normally distributed (median €24,700) making log scale mandatory as linear scale will compress the modal range into an unreadable sliver.</p>
 </div>
 </section>
 <section id="slide-8-univariate-driver-age-distribution" class="slide level2">
@@ -522,10 +522,10 @@ Ang Ming Kwan
 </div>
 </div><div class="column" style="width:44%;">
 <div style="font-size:0.90em; line-height:1.35;">
-<p><strong>Portfolio is concentrated in the 35–60 band</strong>; the actuarially safest segment.</p>
+<p><strong>Portfolio is concentrated in the 35–60 band</strong>.</p>
 <ul>
-<li><strong>Under-25 drivers</strong> are markedly under-represented; higher premiums deter uptake, meaning the insurer attracts only the least price-sensitive young drivers</li>
-<li><strong>Over-65 drivers</strong> taper naturally with licence cessation</li>
+<li><strong>Under-25 drivers</strong> are markedly under-represented.</li>
+<li><strong>Over-65 drivers</strong> taper naturally with licence cessation.</li>
 </ul>
 <p><strong>Statistical implication:</strong> The U-shaped age–risk relationship (young and old drivers claiming more) is well established. However, because both risk extremes are <em>thinly populated</em> here, the age signal is statistically diluted; explaining why the Spearman ρ between driver age and claim frequency is near-zero (−0.035) in Slide 12. This is a portfolio composition effect, not evidence that age is irrelevant to risk.</p>
 </div>
