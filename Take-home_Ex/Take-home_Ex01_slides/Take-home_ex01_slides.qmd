@@ -1,0 +1,987 @@
+---
+title: "Visual Analytics for Motor Vehicle Insurance"
+subtitle: "ISSS608 Visual Analytics Individual Assignment"
+author: "Ang Ming Kwan"
+date: "May 15, 2026"
+date-modified: "last-modified"
+format:
+  revealjs:
+    theme: default
+    slide-number: false
+    transition: fade
+    transition-speed: fast
+    progress: true
+    scrollable: false
+    smaller: false
+    margin: 0.05
+    include-after-body:
+      text: |
+        <style>
+          /* ── Global size increase ~22% ─────────────────────────── */
+          .reveal { font-size: 22px !important; }
+          .reveal h2 {
+            font-size: 1.35em !important;
+            margin-bottom: 0.25em !important;
+            line-height: 1.2 !important;
+          }
+          .reveal h3 {
+            font-size: 1.05em !important;
+            margin-bottom: 0.2em !important;
+          }
+          .reveal p, .reveal li {
+            font-size: 1em !important;
+            line-height: 1.4 !important;
+            margin-bottom: 0.4em !important;
+          }
+          .reveal .slides section {
+            padding-top: 0.1em !important;
+          }
+          /* ── Table cells ───────────────────────────────────────── */
+          .reveal table td, .reveal table th {
+            font-size: 0.9em !important;
+            padding: 4px 8px !important;
+            line-height: 1.35 !important;
+          }
+          /* ── Blockquote ────────────────────────────────────────── */
+          .reveal blockquote {
+            font-size: 0.88em !important;
+            padding: 5px 12px !important;
+            margin: 5px 0 !important;
+          }
+          /* ── Inline code ───────────────────────────────────────── */
+          .reveal code { font-size: 0.88em !important; }
+          /* ── Slide number badge ────────────────────────────────── */
+          .slide-number-custom {
+            position: fixed; bottom: 14px; right: 18px;
+            font-size: 12px; font-family: var(--r-main-font, sans-serif);
+            color: #555; background: rgba(255,255,255,0.85);
+            padding: 2px 7px; border-radius: 4px;
+            z-index: 9999; pointer-events: none;
+          }
+        </style>
+        <div class="slide-number-custom" id="custom-slide-num">slide 1 / 15</div>
+        <script>
+          Reveal.on('slidechanged', function(event) {
+            var total = Reveal.getTotalSlides();
+            var current = Reveal.getState().indexh + 1;
+            document.getElementById('custom-slide-num').textContent =
+              'slide ' + current + ' / ' + total;
+          });
+          Reveal.on('ready', function() {
+            var total = Reveal.getTotalSlides();
+            var current = Reveal.getState().indexh + 1;
+            document.getElementById('custom-slide-num').textContent =
+              'slide ' + current + ' / ' + total;
+          });
+        </script>
+execute:
+  eval: true
+  echo: false
+  warning: false
+  message: false
+  freeze: false
+---
+
+```{r}
+#| label: pres-setup
+#| results: hide
+pacman::p_load(
+  tidyverse, readr, ggdist, ggridges,
+  ggstatsplot, ggpubr, patchwork,
+  scales, viridis, knitr, kableExtra
+)
+
+insurance <- read_delim(
+  "data/Dataset_of_motor_insurance_portfolio.csv",
+  delim = ";", show_col_types = FALSE
+) |>
+  mutate(
+    policy_type = factor(policy_type,
+      levels = c("TP","TPG","CC","COMP_E","COMP_N"),
+      labels = c("Third-Party","TP + Glass","Combined Cover",
+                 "Comp. (Excess)","Comp. (No Excess)")),
+    policy_status = factor(policy_status,
+      levels = c("A","C"), labels = c("Active","Cancelled")),
+    business_type = factor(business_type,
+      levels = c("NB","P"), labels = c("New Business","Portfolio")),
+    bonus_score = factor(bonus_score,
+      levels = c("G","N","B"),
+      labels = c("Good","Neutral","Bad"), ordered = TRUE),
+    fuel_type = factor(fuel_type,
+      levels = c("D","G"), labels = c("Diesel","Gasoline")),
+    municipality_type = factor(municipality_type,
+      levels = c("I","C","IS"), labels = c("Inland","Coastal","Islands")),
+    circulation_area = factor(circulation_area,
+      levels = c("U","R"), labels = c("Urban","Rural")),
+    loss_ratio      = total_incurred / total_premium,
+    claim_frequency = total_claims / total_exposure,
+    claim_severity  = if_else(total_claims > 0,
+                              total_incurred / total_claims, NA_real_),
+    pure_premium    = total_incurred / total_exposure,
+    years_licensed  = year - age_driving_licence,
+    licence_age     = driver_age - years_licensed,
+    driver_age_band = cut(driver_age, c(17,25,35,45,55,65,Inf),
+      labels = c("18-25","26-35","36-45","46-55","56-65","65+"),
+      right = TRUE, include.lowest = TRUE),
+    vehicle_age_band = cut(vehicle_age,
+      breaks = c(-Inf,3,7,12,18,25,Inf),
+      labels = c("0-3","4-7","8-12","13-18","19-25","25+"), right = TRUE),
+    brand_tier = case_when(
+      vehicle_brand %in% c("BMW","MERCEDES","AUDI","LEXUS","PORSCHE",
+        "JAGUAR","LAND ROVER","VOLVO","ALFA ROMEO") ~ "Luxury",
+      vehicle_brand %in% c("VOLKSWAGEN","TOYOTA","FORD","OPEL","SEAT",
+        "PEUGEOT","CITROEN","NISSAN","HYUNDAI","KIA",
+        "FIAT","HONDA","MAZDA","SKODA","MITSUBISHI") ~ "Upper-mid",
+      is.na(vehicle_brand) ~ NA_character_,
+      TRUE ~ "Budget/Comm."),
+    brand_tier = factor(brand_tier, levels = c("Luxury","Upper-mid","Budget/Comm.")),
+    claim_breadth = rowSums(across(
+      c(liability_claims,property_claims,theft_claims,
+        fire_claims,glass_claims,legal_protection_claims,occupants_claims),
+      \(x) x > 0)),
+    had_glass_claim = glass_claims > 0
+  )
+
+lr_cap  <- quantile(insurance$loss_ratio,    0.99, na.rm = TRUE)
+sev_cap <- quantile(insurance$claim_severity, 0.99, na.rm = TRUE)
+
+insurance_viz <- insurance |>
+  mutate(
+    loss_ratio_capped = pmin(loss_ratio,    lr_cap),
+    severity_capped   = pmin(claim_severity, sev_cap)
+  )
+
+bonus_pal <- c("Good" = "#27ae60", "Neutral" = "#e67e22", "Bad" = "#c0392b")
+
+thm <- theme_minimal(base_size = 10) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5, size = 11),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 8.5),
+    panel.grid.minor = element_blank(),
+    legend.position  = "bottom",
+    legend.text      = element_text(size = 8),
+    legend.title     = element_text(size = 8)
+  )
+theme_set(thm)
+```
+
+------------------------------------------------------------------------
+
+## Slide 1 \| Executive Summary
+
+::::::: columns
+::::: {.column width="58%"}
+::: {style="font-size:0.90em; line-height:1.35;"}
+A visual analytics investigation of **354,140 motor insurance policies** from a Spanish non-life insurer (2022–2024) identifies structural profitability risks across product, demographic, behavioural, and geographic dimensions.
+
+**Four critical findings demand underwriting attention:**
+
+🔴 **COMP_N** (Comprehensive, No Excess): most loss-making product; 3.5% Bad-bonus policyholders confirms adverse selection; immediate actuarial review required
+
+🔴 **Bonus score**: statistically validated predictor; loss ratio increases monotonically Good→Bad (all Wilcoxon p \< 0.05); Bad-score policyholders drive disproportionate large-loss tail exposure
+
+🟠 **Short-duration policies**: systematically higher loss ratios confirm claim-then-cancel behaviour; structural premium inadequacy
+
+🟠 **Glass claims are gateway events**: bimodal frequency at 1–2 events/year confirms co-occurrence with broader claims; validates glass history as a renewal risk flag
+:::
+
+::: {style="font-size:0.90em; margin-top:4px; padding:5px 10px; background:#fef9e7; border-left:3px solid #e67e22; border-radius:3px;"}
+Also: NB carries 2× adverse risk vs portfolio renewals · Bad-score policyholders: 75% retention · Urban \> Rural loss ratios · Island pricing statistically unreliable
+:::
+:::::
+
+::: {.column width="42%"}
+```{r}
+#| label: exec-kpi-bar
+#| fig-height: 3.7
+#| fig-width: 4.2
+kpi_df <- tibble(
+  metric   = c("Policies","Active","Cancelled","With Claims","Zero Claims"),
+  value    = c(354140,
+               sum(insurance_viz$policy_status=="Active"),
+               sum(insurance_viz$policy_status=="Cancelled"),
+               sum(insurance_viz$total_claims > 0),
+               sum(insurance_viz$total_claims == 0)),
+  category = c("Total","Status","Status","Claims","Claims")
+) |>
+  mutate(pct   = value / 354140 * 100,
+         label = paste0(comma(value)," (",round(pct,1),"%)"),
+         metric = fct_rev(fct_inorder(metric)))
+
+ggplot(kpi_df, aes(x = metric, y = pct, fill = category)) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  geom_text(aes(label = label), hjust = -0.06, size = 2.8) +
+  scale_fill_manual(values = c("Total"="#2c3e50","Status"="#2980b9","Claims"="#c0392b")) +
+  scale_y_continuous(limits = c(0,120), labels = function(x) paste0(x,"%")) +
+  coord_flip() +
+  labs(title = "Portfolio at a Glance",
+       subtitle = "354,140 policies | 2022–2024",
+       x = NULL, y = "% of portfolio") +
+  theme(plot.background = element_rect(fill = "white", colour = NA),
+        axis.text.y = element_text(size = 9))
+```
+:::
+:::::::
+
+------------------------------------------------------------------------
+
+## Slide 2 \| Data Preparation
+
+:::::::: columns
+::::: {.column width="55%"}
+::: {style="font-size:0.90em; line-height:1.35;"}
+**Import:** Explicit semicolon delimiter via `read_delim()`: prevents silent mis-parsing of the 47-column, 354,140-row file.
+
+**Quality checks:** Zero duplicates. Four variables with missing values: handled **per-analysis** (not global imputation), keeping each decision transparent.
+
+**Categorical recoding:** Raw codes (e.g. `"G"`, `"NB"`, `"U"`) replaced with labels. `bonus_score` converted to ordered factor: enabling correct ordering in Wilcoxon tests and ridgeline plots.
+
+**Outlier capping:** 99th percentile cap on loss ratio and severity *for visualisation only*: all statistical tests use uncapped values.
+
+**Binning:** Driver/vehicle age binned into actuarial bands. Vehicle brands classified into three tiers. `claim_breadth` (number of distinct claim lines per policy) derived as a behavioural signal variable.
+:::
+
+::: {style="font-size:0.90em; margin-top:5px; padding:5px 10px; background:#eaf3fb; border-left:3px solid #2980b9; border-radius:3px;"}
+**Principle:** Every wrangling decision is documented at the point of use: not globally applied,so the audit trail is always traceable.
+:::
+:::::
+
+:::: {.column width="45%"}
+```{r}
+#| label: slide2-missing
+#| fig-height: 2.6
+#| fig-width: 4.4
+missing_df <- tibble(
+  variable = c("fuel_type","vehicle_value","vehicle_age","age_driving_licence"),
+  missing  = c(1287, 513, 2, 2),
+  pct      = c(1287, 513, 2, 2) / 354140 * 100
+) |>
+  mutate(variable = fct_reorder(variable, missing), high = pct > 0.3)
+
+ggplot(missing_df, aes(x = variable, y = missing, fill = high)) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  geom_text(aes(label = paste0(comma(missing)," (",round(pct,2),"%)")),
+            hjust = -0.08, size = 2.8) +
+  scale_fill_manual(values = c("FALSE"="#95a5a6","TRUE"="#e74c3c")) +
+  scale_y_continuous(limits = c(0,1800), labels = comma) +
+  coord_flip() +
+  labs(title = "Missing Values by Variable",
+       subtitle = "Red = materially missing (>0.3%)",
+       x = NULL, y = "Count")
+```
+
+::: {style="font-size:0.90em; margin-top:6px; padding:5px 10px; background:#fef9e7; border-left:3px solid #e67e22; border-radius:3px;"}
+`fuel_type` (0.36%) and `vehicle_value` (0.14%) are the only meaningful gaps. Impact on downstream analyses is minimal; excluded only in analyses that use those variables.
+:::
+::::
+::::::::
+
+------------------------------------------------------------------------
+
+## Slide 3 \| Derived KPIs
+
+::::::: columns
+::::: {.column width="50%"}
+:::: {style="font-size:0.90em; line-height:1.35;"}
+**Why raw data is insufficient:** The dataset has premiums, claims, incurred costs, and exposure; but none of the actuarial metrics needed to assess profitability or volatility. Six KPIs were derived as the analytical backbone.
+
+**Exposure-adjustment is non-negotiable:** A 3-month policy and a 12-month policy generate the same raw claim count for zero incidents. `total_exposure` (policy years) normalises all KPIs; without it, short-duration segments appear artificially safer.
+
+**Demographic variables tested:** `years_licensed` and `licence_age` were derived to test whether driving experience predicts risk better than age.
+
+::: {style="padding:5px 10px; background:#fdf2f8; border-left:3px solid #c0392b; border-radius:3px;"}
+⚠️ **Data quality finding:** Both variables showed near-zero Spearman ρ with claim frequency; because `age_driving_licence` records the *calendar year* of licence issue, not years of experience. `years_licensed` is invalid as derived and requires re-specification before use in any model.
+:::
+::::
+:::::
+
+::: {.column width="50%"}
+```{r}
+#| label: slide3-kpi-table
+kpi_tbl <- tibble(
+  KPI = c("loss_ratio","claim_frequency","claim_severity",
+          "pure_premium","years_licensed","licence_age"),
+  Formula = c("incurred / premium",
+              "claims / exposure",
+              "incurred / claims",
+              "incurred / exposure",
+              "year − lic_year",
+              "age − years_lic"),
+  Meaning = c(
+    "LR > 1 = underwriting loss",
+    "Claims per policy year",
+    "Avg cost per claim event",
+    "Risk cost per policy year",
+    "Experience proxy ⚠️",
+    "Age at first licence")
+)
+knitr::kable(kpi_tbl, format = "html", escape = FALSE,
+             align = c("l","l","l"),
+             col.names = c("KPI","Formula","Interpretation")) |>
+  kable_styling(bootstrap_options = c("striped","condensed"),
+                full_width = TRUE, font_size = 11.5) |>
+  column_spec(1, bold = TRUE, color = "#1a5276") |>
+  row_spec(c(1,2), background = "#fef9e7") |>
+  row_spec(c(3,4), background = "#eafaf1") |>
+  row_spec(c(5,6), background = "#fdf2f8")
+```
+:::
+:::::::
+
+------------------------------------------------------------------------
+
+## Slide 4 \| Analyses Overview: Univariate
+
+::: {style="font-size:0.90em;"}
+| \# | Analysis | Chart Type | Rationale |
+|:-----------------|:-----------------|:-----------------|:-----------------|
+| 4.1 | Portfolio composition by policy type | `ggbarstats()` + Pearson χ² | Plain bar only answers *how many*; `ggbarstats()` tests whether bonus score composition differs significantly across types |
+| 4.2 | Bonus score by business type | `ggbarstats()` + Pearson χ² | Tests whether new business carries materially worse risk profile than portfolio renewals |
+| 4.3 | Geographic distribution | Stacked 100% bar + count labels | Proportions **and** absolute volumes both matter; pure proportions hide the Islands segment's thin \~24,000-policy base |
+| 4.4 | Distribution of vehicle age | Histogram + density overlay | Right-skewed integer variable; density curve smooths the empirical shape |
+| 4.5 | Distribution of vehicle value | Histogram + density (log₁₀) | **Mandatory log scale**; two orders of magnitude spread compresses the modal range into invisibility on linear scale |
+| 4.6 | Distribution of driver age | Histogram + density + reference lines | Reference lines at 25 and 65 make actuarial risk thresholds immediately visible |
+:::
+
+::: {style="font-size:0.90em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
+**Guiding principle:** Chart type is determined by the question, not convention. `ggbarstats()` replaces plain bars for categorical variables because the chi-square test is the primary analytical question. Log scale for vehicle value is a statistical necessity, not a stylistic choice.
+:::
+
+------------------------------------------------------------------------
+
+## Slide 5 \| Analyses Overview: Bivariate
+
+::: {style="font-size:0.85em;"}
+| Domain | Analysis | Chart | Rationale |
+|:-----------------|:-----------------|:-----------------|:-----------------|
+| Conventional | Loss ratio by policy type | Violin + boxplot + Kruskal-Wallis | Reveals multi-modality; non-parametric for skewed data |
+| Conventional | Loss ratio by bonus score | `stat_halfeye` + Wilcoxon pairwise | Tests monotonic Good→Bad ordering statistically |
+| Conventional | Severity by fuel type | `stat_halfeye` + Wilcoxon (log) | Log scale mandatory; distinguishes location shift vs tail effect |
+| Conventional | Severity by vehicle age | `geom_hex` + GAM | Hexbin resolves 354K-row overplotting; GAM captures non-linearity |
+| Demographic | Loss ratio by age bands | Ridgelines + quartile shading | 6-group distributional shape comparison, not just medians |
+| Demographic | Driver age × vehicle age | Heatmap (6×6) | Only compact format for 36-cell interaction matrix |
+| Demographic | Driver age vs years licensed | Dual GAM + Spearman ρ | Side-by-side comparison of two candidate risk predictors |
+| Brand/Status | Brand tier: frequency vs severity | Side-by-side `stat_pointinterval` | Decomposes dimensions conflated in a single loss ratio |
+| Brand/Status | Bonus score by brand tier | `ggbarstats()` + χ² | Tests whether risk profile differs by brand tier |
+| Brand/Status | Power-to-weight vs freq | `geom_hex` + GAM (faceted) | Tests performance-proxy signal across tiers |
+| Brand/Status | Repair cost intensity | Ranked dotplot + CI | CI width communicates estimation confidence |
+| Behavioural | Serial claimer breadth | Heatmap | Exposes anomalous multi-line claimers by bonus score |
+| Behavioural | Glass claims gateway | Overlaid density | Right-tail differences confirm gateway signal |
+| Behavioural | New business vs portfolio | `ggbetweenstats` | Unified violin + significance test + effect size |
+| Loyalty | Cancellation paradox | `ggbarstats` + density | Two-step: cancellation rate, then loss ratio of leavers |
+| Loyalty | Exposure duration | Ridgelines (4 bands) | Shape comparison across short vs full duration |
+| Geographic | Loss ratio by geography | Point-interval 95%+99% CI | CI width is the primary finding for island segments |
+:::
+
+------------------------------------------------------------------------
+
+## Slide 6 \| Univariate: Portfolio Composition
+
+::::: columns
+::: {.column width="50%"}
+```{r}
+#| label: slide6-policy-type
+#| fig-height: 2.9
+#| fig-width: 5.0
+pt_data <- insurance_viz |>
+  count(policy_type, bonus_score) |>
+  group_by(policy_type) |>
+  mutate(pct = n / sum(n) * 100) |>
+  ungroup() |>
+  mutate(bonus_score = factor(bonus_score, c("Good","Neutral","Bad")))
+
+ggplot(pt_data,
+       aes(x = fct_rev(policy_type), y = pct, fill = bonus_score)) +
+  geom_col(position = "stack", width = 0.65, colour = "white", linewidth = 0.3) +
+  geom_text(aes(label = ifelse(pct > 1.5, paste0(round(pct,1),"%"), "")),
+            position = position_stack(vjust = 0.5),
+            size = 2.6, colour = "white", fontface = "bold") +
+  scale_fill_manual(values = bonus_pal, name = "Bonus") +
+  scale_x_discrete(labels = function(x) str_wrap(x, 14)) +
+  scale_y_continuous(labels = function(x) paste0(x,"%")) +
+  coord_flip() +
+  labs(title = "Policy Type × Bonus Score",
+       subtitle = "χ² p < 0.001",
+       x = NULL, y = "Proportion (%)") +
+  theme(legend.position = "top")
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| label: slide6-bonus-business
+#| fig-height: 2.9
+#| fig-width: 4.8
+nb_data <- insurance_viz |>
+  count(business_type, bonus_score) |>
+  group_by(business_type) |>
+  mutate(pct = n / sum(n) * 100) |>
+  ungroup() |>
+  mutate(bonus_score = factor(bonus_score, c("Good","Neutral","Bad")))
+
+ggplot(nb_data,
+       aes(x = business_type, y = pct, fill = bonus_score)) +
+  geom_col(position = "stack", width = 0.5, colour = "white", linewidth = 0.3) +
+  geom_text(aes(label = paste0(round(pct,1),"%")),
+            position = position_stack(vjust = 0.5),
+            size = 2.8, colour = "white", fontface = "bold") +
+  scale_fill_manual(values = bonus_pal, name = "Bonus") +
+  scale_y_continuous(labels = function(x) paste0(x,"%")) +
+  labs(title = "Bonus Score: NB vs Portfolio",
+       subtitle = "NB: 1.6% Bad vs 0.8% Portfolio",
+       x = NULL, y = "%") +
+  theme(legend.position = "top")
+```
+:::
+:::::
+
+::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
+**Interpretation:** χ² (p \< 0.001) confirms bonus composition is not independent of policy type. **COMP_N carries 3.5% Bad-score policyholders**; nearly 3× the rate of other types, textbook adverse selection. **New Business carries 2× the Bad-score rate of Portfolio renewals** (1.6% vs 0.8%), confirming the acquisition channel absorbs materially worse risk before renewal underwriting filters apply.
+:::
+
+------------------------------------------------------------------------
+
+## Slide 7 \| Univariate: Geographic & Vehicle Distributions
+
+::::: columns
+::: {.column width="34%"}
+```{r}
+#| label: slide7-geo
+#| fig-height: 3.7
+#| fig-width: 3.4
+geo_df <- insurance_viz |>
+  count(municipality_type, circulation_area) |>
+  group_by(municipality_type) |>
+  mutate(pct = n / sum(n) * 100, n_total = sum(n)) |>
+  ungroup()
+
+ggplot(geo_df,
+       aes(x = municipality_type, y = pct, fill = circulation_area)) +
+  geom_col(position = "stack", width = 0.6, colour = "white") +
+  geom_text(aes(label = paste0(round(pct,0),"%\n(n=",comma(n),")")),
+            position = position_stack(vjust = 0.5),
+            size = 2.3, colour = "white", fontface = "bold") +
+  geom_text(data = distinct(geo_df, municipality_type, n_total),
+            aes(x = municipality_type, y = 107,
+                label = paste0("n=",comma(n_total))),
+            inherit.aes = FALSE, size = 2.4, colour = "grey30") +
+  scale_fill_manual(values = c("Urban"="#2980b9","Rural"="#8e44ad"), name = NULL) +
+  scale_y_continuous(limits = c(0,115), labels = function(x) paste0(x,"%")) +
+  labs(title = "Geographic Split",
+       x = NULL, y = "%") +
+  theme(legend.position = "top")
+```
+:::
+
+::: {.column width="66%"}
+```{r}
+#| label: slide7-vehicle-dist
+#| fig-height: 3.7
+#| fig-width: 6.2
+p_vage <- ggplot(insurance_viz |> filter(!is.na(vehicle_age)),
+                 aes(x = vehicle_age)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 1,
+                 fill = "#8e44ad", colour = "white", linewidth = 0.15) +
+  geom_density(colour = "#e67e22", linewidth = 0.9) +
+  geom_vline(xintercept = median(insurance_viz$vehicle_age, na.rm=TRUE),
+             linetype = "dashed", colour = "grey40") +
+  annotate("text",
+           x = median(insurance_viz$vehicle_age, na.rm=TRUE)+1.5, y=0.022,
+           label = paste0("Med ",
+             round(median(insurance_viz$vehicle_age, na.rm=TRUE),0),"yr"),
+           hjust = 0, size = 2.6, colour = "grey40") +
+  labs(title = "Vehicle Age", x = "Years", y = "Density")
+
+p_vval <- ggplot(insurance_viz |> filter(!is.na(vehicle_value)),
+                 aes(x = vehicle_value)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 60,
+                 fill = "#2980b9", colour = "white", linewidth = 0.15) +
+  geom_density(colour = "#c0392b", linewidth = 0.9) +
+  scale_x_log10(labels = comma) +
+  labs(title = "Vehicle Value (log₁₀)", x = "EUR", y = "Density")
+
+p_vage + p_vval
+```
+:::
+:::::
+
+::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
+**Interpretation:** Islands has only \~24,000 policies; too few for statistically reliable loss ratio estimates (wide CIs confirmed in Slide 14). Vehicle age is right-skewed (mode 20–25 yrs), indicating an older fleet where the non-linear severity curve applies at both extremes. Vehicle value is log-normally distributed (median €24,700)which makes log scale is mandatory; linear scale compresses the modal range into an unreadable sliver.
+:::
+
+------------------------------------------------------------------------
+
+## Slide 8 \| Univariate: Driver Age Distribution
+
+:::::: columns
+::: {.column width="56%"}
+```{r}
+#| label: slide8-driver-age
+#| fig-height: 3.9
+#| fig-width: 5.6
+med_age <- median(insurance_viz$driver_age, na.rm=TRUE)
+
+ggplot(insurance_viz, aes(x = driver_age)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 2,
+                 fill = "#27ae60", colour = "white", linewidth = 0.2) +
+  geom_density(colour = "#c0392b", linewidth = 1.1) +
+  geom_vline(xintercept = c(25, 65), linetype = "dashed",
+             colour = "#2c3e50", linewidth = 0.8) +
+  annotate("rect", xmin=17, xmax=25, ymin=0, ymax=0.043, alpha=0.08, fill="#e74c3c") +
+  annotate("rect", xmin=65, xmax=90, ymin=0, ymax=0.043, alpha=0.08, fill="#e74c3c") +
+  annotate("text", x=21, y=0.040, label="Young\nrisk\nzone",
+           size=2.6, colour="#c0392b", hjust=0.5) +
+  annotate("text", x=73, y=0.040, label="Senior\nrisk\nzone",
+           size=2.6, colour="#c0392b", hjust=0.5) +
+  annotate("text", x=26, y=0.030, label="25", size=2.8, colour="#2c3e50") +
+  annotate("text", x=66, y=0.030, label="65", size=2.8, colour="#2c3e50") +
+  geom_vline(xintercept=med_age, linetype="dotted", colour="#2980b9", linewidth=0.8) +
+  annotate("text", x=med_age+1.5, y=0.025,
+           label=paste0("Median: ",round(med_age,0)),
+           size=2.8, colour="#2980b9", hjust=0) +
+  scale_x_continuous(breaks=seq(20,90,10)) +
+  labs(title="Distribution of Driver Age",
+       subtitle="Shaded zones = actuarial high-risk segments (under 25 and over 65)",
+       x="Driver Age (years)", y="Density")
+```
+:::
+
+:::: {.column width="44%"}
+::: {style="font-size:0.90em; line-height:1.35;"}
+**Portfolio is concentrated in the 35–60 band**; the actuarially safest segment.
+
+-   **Under-25 drivers** are markedly under-represented; higher premiums deter uptake, meaning the insurer attracts only the least price-sensitive young drivers
+-   **Over-65 drivers** taper naturally with licence cessation
+
+**Statistical implication:** The U-shaped age–risk relationship (young and old drivers claiming more) is well established. However, because both risk extremes are *thinly populated* here, the age signal is statistically diluted; explaining why the Spearman ρ between driver age and claim frequency is near-zero (−0.035) in Slide 12. This is a portfolio composition effect, not evidence that age is irrelevant to risk.
+:::
+::::
+::::::
+
+------------------------------------------------------------------------
+
+## Slide 9 \| Univariate: Summary of Findings
+
+::::::: columns
+::::: {.column width="52%"}
+::: {style="font-size:0.90em;"}
+| Variable | Pattern | Implication |
+|:-----------------------|:-----------------------|:-----------------------|
+| **Policy type** | COMP_N: 3.5% Bad; TP: 1.6% | Adverse selection in comp. cover |
+| **Business type** | NB: 1.6% Bad vs 0.8% Portfolio | Acquisition absorbs worse risk |
+| **Municipality** | Islands: n ≈ 24,000 only | Estimates unreliable; need uncertainty buffer |
+| **Vehicle age** | Mode 20–25 yrs; right-skewed | Non-linear severity at both extremes |
+| **Vehicle value** | Log-normal; median €24,700 | Log-scale severity loadings required |
+| **Driver age** | 35–60 dominated; thin extremes | U-shape diluted; signal at extremes |
+:::
+
+::: {style="font-size:0.90em; margin-top:6px; padding:5px 10px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
+**Cross-variable insight:** An older vehicle fleet + middle-aged driver base means demographic extremes are bypassed. Risk concentration is instead occurring in the **product and acquisition channel dimensions** (COMP_N adverse selection, NB vs Portfolio gap).
+:::
+:::::
+
+::: {.column width="48%"}
+```{r}
+#| label: slide9-nongood-bar
+#| fig-height: 3.9
+#| fig-width: 4.8
+comp_data <- insurance_viz |>
+  count(policy_type, bonus_score) |>
+  group_by(policy_type) |>
+  mutate(pct = n / sum(n) * 100) |>
+  ungroup() |>
+  filter(bonus_score != "Good") |>
+  mutate(policy_type = str_remove_all(policy_type, "\n"))
+
+ggplot(comp_data,
+       aes(x = fct_reorder(policy_type, pct, sum),
+           y = pct, fill = bonus_score)) +
+  geom_col(position = "dodge", width = 0.65) +
+  geom_text(aes(label = paste0(round(pct,1),"%")),
+            position = position_dodge(width = 0.65),
+            hjust = -0.1, size = 2.7) +
+  scale_fill_manual(values = c("Neutral"="#e67e22","Bad"="#c0392b"),
+                    name = "Bonus Score") +
+  scale_y_continuous(limits = c(0,6.5), labels = function(x) paste0(x,"%")) +
+  coord_flip() +
+  labs(title = "Non-Good Bonus % by Policy Type",
+       subtitle = "Higher % = greater adverse selection signal",
+       x = NULL, y = "% of policies in type") +
+  theme(legend.position = "top")
+```
+:::
+:::::::
+
+------------------------------------------------------------------------
+
+## Slide 10 \| Bivariate: Loss Ratio- Policy Type & Bonus Score
+
+::::: columns
+::: {.column width="50%"}
+```{r}
+#| label: slide10-lr-policy
+#| fig-height: 3.4
+#| fig-width: 5.0
+ggplot(
+  insurance_viz |> filter(loss_ratio_capped > 0, total_exposure > 0),
+  aes(x = policy_type, y = loss_ratio_capped, fill = policy_type)
+) +
+  geom_violin(alpha = 0.5, trim = TRUE, show.legend = FALSE) +
+  geom_boxplot(width = 0.12, outlier.shape = NA,
+               fill = "white", colour = "grey30", show.legend = FALSE) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "#c0392b") +
+  annotate("text", x = 0.65, y = 1.08, label = "Break-even",
+           size = 2.6, colour = "#c0392b", hjust = 0) +
+  scale_fill_viridis_d(option = "D") +
+  scale_x_discrete(labels = function(x) str_wrap(x, 11)) +
+  stat_compare_means(method = "kruskal.test", label.x = 1.2,
+                     label.y = quantile(insurance_viz$loss_ratio_capped,
+                                        0.995, na.rm=TRUE) * 0.95,
+                     size = 2.6) +
+  labs(title = "Loss Ratio by Policy Type",
+       subtitle = "Kruskal-Wallis p < 0.05",
+       x = NULL, y = "Loss Ratio")
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| label: slide10-lr-bonus
+#| fig-height: 3.4
+#| fig-width: 5.0
+ggplot(
+  insurance_viz |> filter(loss_ratio_capped > 0, total_premium > 0),
+  aes(x = bonus_score, y = loss_ratio_capped, fill = bonus_score)
+) +
+  stat_halfeye(adjust = 0.5, justification = -0.2,
+               .width = 0, point_colour = NA, alpha = 0.6) +
+  geom_boxplot(width = 0.14, outlier.shape = NA,
+               fill = "white", colour = "grey30") +
+  stat_compare_means(
+    comparisons = list(c("Good","Neutral"),c("Neutral","Bad"),c("Good","Bad")),
+    method = "wilcox.test", label = "p.signif", size = 2.8) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "#c0392b") +
+  scale_fill_manual(values = bonus_pal) +
+  labs(title = "Loss Ratio by Bonus Score",
+       subtitle = "All pairwise Wilcoxon p < 0.05",
+       x = NULL, y = "Loss Ratio") +
+  theme(legend.position = "none")
+```
+:::
+:::::
+
+::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
+**Interpretation:** COMP_N has the **highest median loss ratio and widest violin**- simultaneously the least profitable and most volatile product. Violin width reveals substantial mass above break-even, not just outliers (Kruskal-Wallis p \< 0.05). Loss ratio increases **monotonically Good→Bad** with all pairwise tests significant. Bad-score half-eye shows a heavier right tail- bad policyholders drive disproportionate *large-loss* exposure, which is what drives capital requirements, not the mean.
+:::
+
+------------------------------------------------------------------------
+
+## Slide 11 \| Bivariate: Claim Severity - Fuel Type & Vehicle Age
+
+::::: columns
+::: {.column width="42%"}
+```{r}
+#| label: slide11-sev-fuel
+#| fig-height: 3.7
+#| fig-width: 4.2
+ggplot(
+  insurance_viz |>
+    filter(!is.na(severity_capped), !is.na(fuel_type), severity_capped > 0),
+  aes(x = fuel_type, y = severity_capped, fill = fuel_type)
+) +
+  stat_halfeye(adjust = 0.5, justification = -0.2,
+               .width = 0, point_colour = NA, alpha = 0.65) +
+  geom_boxplot(width = 0.14, outlier.shape = NA,
+               fill = "white", colour = "grey30") +
+  stat_compare_means(method = "wilcox.test", label = "p.format",
+                     label.x = 1.5, label.y.npc = 0.88, size = 3) +
+  scale_y_log10(labels = comma,
+                breaks = c(10,50,100,500,1000,5000), limits = c(10,7000)) +
+  scale_fill_manual(values = c("Diesel"="#2980b9","Gasoline"="#e67e22")) +
+  labs(title = "Severity by Fuel Type",
+       subtitle = "Log scale | zero-incurred excluded",
+       x = NULL, y = "Severity (EUR, log)") +
+  theme(legend.position = "none")
+```
+:::
+
+::: {.column width="58%"}
+```{r}
+#| label: slide11-sev-vage
+#| fig-height: 3.7
+#| fig-width: 5.6
+ggplot(
+  insurance_viz |>
+    filter(!is.na(vehicle_age), !is.na(severity_capped), severity_capped > 0),
+  aes(x = vehicle_age, y = severity_capped)
+) +
+  geom_hex(bins = 50, aes(fill = after_stat(log(count)))) +
+  geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs"),
+              colour = "#c0392b", linewidth = 1, se = TRUE) +
+  scale_fill_viridis_c(option = "magma", name = "log(n)") +
+  scale_y_log10(labels = comma,
+                breaks = c(10,100,1000,5000), limits = c(5,7500)) +
+  labs(title = "Severity vs Vehicle Age",
+       subtitle = "Hexbin + GAM smoother | log y-axis",
+       x = "Vehicle Age (years)", y = "Severity (EUR, log)")
+```
+:::
+:::::
+
+::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
+**Interpretation:** Diesel vehicles show **statistically higher severity** (Wilcoxon p = 0.04) - a consistent median *location shift*, not a tail effect, supporting a 5–10% diesel severity loading. Vehicle age shows a **non-linear U-shape**: severity peaks for new vehicles (high replacement value), declines through mid-years, then rises again for very old vehicles (rare parts, specialist labour). A simple declining age factor in the rating engine is therefore incorrect.
+:::
+
+------------------------------------------------------------------------
+
+## Slide 12 \| Bivariate: Demographic Drivers
+
+::::: columns
+::: {.column width="54%"}
+```{r}
+#| label: slide12-ridge-age
+#| fig-height: 3.7
+#| fig-width: 5.4
+ggplot(
+  insurance_viz |>
+    filter(loss_ratio_capped > 0, total_exposure > 0, !is.na(driver_age_band)),
+  aes(x = loss_ratio_capped, y = driver_age_band,
+      fill = factor(after_stat(quantile)))
+) +
+  stat_density_ridges(
+    geom = "density_ridges_gradient", calc_ecdf = TRUE,
+    quantiles = 4, quantile_lines = TRUE,
+    scale = 1.9, rel_min_height = 0.005, bandwidth = 0.045) +
+  scale_fill_viridis_d(name = "Quartile", option = "D", alpha = 0.85) +
+  scale_x_continuous(limits = c(0,5), expand = c(0,0)) +
+  scale_y_discrete(expand = expansion(add = c(0.3, 2.0))) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
+  labs(title = "Loss Ratio by Driver Age Band",
+       subtitle = "Ridgeline + quartile shading | dashed = break-even",
+       x = "Loss Ratio", y = NULL) +
+  theme_ridges(font_size = 10) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 11),
+        legend.position = "right", legend.text = element_text(size = 8))
+```
+:::
+
+::: {.column width="46%"}
+```{r}
+#| label: slide12-heatmap
+#| fig-height: 3.7
+#| fig-width: 4.4
+hm_data <- insurance_viz |>
+  filter(!is.na(driver_age_band), !is.na(vehicle_age_band), total_exposure > 0) |>
+  group_by(driver_age_band, vehicle_age_band) |>
+  summarise(mean_freq = mean(claim_frequency, na.rm=TRUE), n=n(), .groups="drop") |>
+  filter(n >= 30) |>
+  mutate(mean_freq = pmin(mean_freq, 2.0))
+
+mid_val <- median(hm_data$mean_freq, na.rm=TRUE)
+
+ggplot(hm_data,
+       aes(x = vehicle_age_band, y = driver_age_band, fill = mean_freq)) +
+  geom_tile(colour = "white", linewidth = 0.5) +
+  geom_text(aes(label = round(mean_freq,2),
+                colour = mean_freq > mid_val),
+            size = 2.4, fontface = "bold", show.legend = FALSE) +
+  scale_colour_manual(values = c("TRUE"="white","FALSE"="grey20")) +
+  scale_fill_gradient2(low="#2166ac", mid="#f7f7f7", high="#d6604d",
+                       midpoint = mid_val, name = "Mean\nFreq") +
+  labs(title = "Claim Freq: Age Interaction",
+       subtitle = "Driver × Vehicle Age | mean; n<30 excluded",
+       x = "Vehicle Age Band", y = NULL) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, size = 8))
+```
+:::
+:::::
+
+::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
+**Interpretation:** Ridgelines confirm the **actuarial U-shape** - 18–25 band widest and most right-skewed; 36–55 most compact and closest to break-even; 65+ moderately elevated. Heatmap reveals an interaction: **65+ drivers in 0–3-year vehicles show elevated claim frequency**; consistent with older drivers adapting to unfamiliar new vehicle technology. Driver age and years_licensed both show near-zero Spearman ρ, a consequence of the under-25 and over-65 extremes being thinly represented in this portfolio (confirmed in Slide 8).
+:::
+
+------------------------------------------------------------------------
+
+## Slide 13 \| Bivariate: Brand, Status & Behavioural Drivers
+
+::::: columns
+::: {.column width="46%"}
+```{r}
+#| label: slide13-brand-panels
+#| fig-height: 3.7
+#| fig-width: 4.6
+brand_data <- insurance_viz |> filter(!is.na(brand_tier), total_exposure > 0)
+
+p_freq_b <- ggplot(brand_data, aes(x = brand_tier, y = claim_frequency)) +
+  stat_pointinterval(.width = c(0.95,0.99), point_size = 2,
+                     aes(colour = factor(after_stat(.width)))) +
+  scale_colour_manual(name="CI",
+    values=c("0.95"="#2980b9","0.99"="#e67e22"), labels=c("95%","99%")) +
+  scale_x_discrete(labels = function(x) str_wrap(x, 9)) +
+  labs(title = "Claim Frequency", x = NULL, y = "Freq") +
+  theme(legend.position = "top")
+
+p_sev_b <- ggplot(
+  brand_data |> filter(!is.na(severity_capped), severity_capped > 0),
+  aes(x = brand_tier, y = severity_capped)) +
+  stat_pointinterval(.width = c(0.95,0.99), point_size = 2,
+                     aes(colour = factor(after_stat(.width)))) +
+  scale_colour_manual(name="CI",
+    values=c("0.95"="#2980b9","0.99"="#e67e22"), labels=c("95%","99%")) +
+  scale_y_log10(labels=comma,
+                breaks=c(10,100,1000,5000), limits=c(10,7500)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, 9)) +
+  labs(title = "Claim Severity (log)", x = NULL, y = "EUR (log)") +
+  theme(legend.position = "top")
+
+p_freq_b / p_sev_b
+```
+:::
+
+::: {.column width="54%"}
+```{r}
+#| label: slide13-glass
+#| fig-height: 3.7
+#| fig-width: 5.2
+glass_data <- insurance_viz |>
+  filter(total_exposure > 0, claim_frequency < 8) |>
+  mutate(glass_label = if_else(had_glass_claim,"Filed glass claim","No glass claim"))
+
+ggplot(glass_data,
+       aes(x = claim_frequency, fill = glass_label, colour = glass_label)) +
+  geom_density(alpha = 0.38, linewidth = 0.9) +
+  scale_fill_manual(
+    values = c("Filed glass claim"="#c0392b","No glass claim"="#2980b9"), name=NULL) +
+  scale_colour_manual(
+    values = c("Filed glass claim"="#922b21","No glass claim"="#1a5276"), name=NULL) +
+  scale_x_continuous(limits = c(0,5)) +
+  annotate("text", x=1.5, y=1.5,
+           label="Glass claimers:\nbimodal at 1.0 & 2.0",
+           size=2.8, colour="#922b21", hjust=0) +
+  annotate("segment", x=1.4, xend=1.1, y=1.48, yend=1.82,
+           colour="#922b21", linewidth=0.5,
+           arrow=arrow(length=unit(0.1,"cm"))) +
+  labs(title = "Glass Claimers vs Non-Claimers",
+       subtitle = "Gateway claim confirmed: bimodal distribution",
+       x = "Claim Frequency (events/policy year)", y = "Density") +
+  theme(legend.position = "top")
+```
+:::
+:::::
+
+::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
+**Interpretation:** Brand tier does **not** discriminate claim frequency (all tiers identical), but Luxury's 99% CI extends further upward for severity, confirming disproportionately costly extreme claims. Apply brand tier as a **severity tail loading**, not a frequency loading. Glass claimers show a **bimodal distribution peaking at 1.0 and 2.0 events/year**, they almost never appear at zero frequency. Glass claims are confirmed gateway events that co-occur with broader claims activity; a 10–15% frequency loading at renewal for prior-year glass claimers is supported.
+:::
+
+------------------------------------------------------------------------
+
+## Slide 14 \| Bivariate: Loyalty & Geographic Drivers
+
+::::: columns
+::: {.column width="35%"}
+```{r}
+#| label: slide14-cancel
+#| fig-height: 3.7
+#| fig-width: 3.4
+cancel_df <- insurance_viz |>
+  count(bonus_score, policy_status) |>
+  group_by(bonus_score) |>
+  mutate(pct = n / sum(n) * 100) |>
+  ungroup()
+
+ggplot(cancel_df,
+       aes(x = bonus_score, y = pct, fill = policy_status)) +
+  geom_col(position = "stack", width = 0.6, colour = "white") +
+  geom_text(aes(label = paste0(round(pct,0),"%")),
+            position = position_stack(vjust = 0.5),
+            size = 3, colour = "white", fontface = "bold") +
+  scale_fill_manual(
+    values = c("Active"="#27ae60","Cancelled"="#c0392b"), name = "Status") +
+  scale_y_continuous(labels = function(x) paste0(x,"%")) +
+  labs(title = "Cancellation\nby Bonus Score",
+       subtitle = "Bad: 75% stay\nGood: 90% stay",
+       x = "Bonus Score", y = "%") +
+  theme(legend.position = "top")
+```
+:::
+
+::: {.column width="65%"}
+```{r}
+#| label: slide14-geo-ci
+#| fig-height: 3.7
+#| fig-width: 6.2
+geo_ci <- insurance_viz |>
+  filter(loss_ratio_capped > 0, total_exposure > 0) |>
+  mutate(
+    geo_seg = paste0(municipality_type, "\n(", circulation_area, ")"),
+    geo_seg = fct_reorder(geo_seg, loss_ratio_capped, median)
+  )
+
+ggplot(geo_ci, aes(x = geo_seg, y = loss_ratio_capped)) +
+  stat_pointinterval(.width = c(0.95,0.99), point_size = 2.8,
+                     aes(colour = factor(after_stat(.width)))) +
+  scale_colour_manual(name = "CI",
+    values = c("0.95"="#2980b9","0.99"="#e67e22"),
+    labels = c("95% CI","99% CI")) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "grey40") +
+  annotate("text", x=0.65, y=1.08, label="Break-even",
+           hjust=0, size=2.8, colour="grey40") +
+  labs(title = "Loss Ratio by Geographic Segment",
+       subtitle = "Wide island CIs = pricing uncertainty",
+       x = NULL, y = "Loss Ratio") +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1, size = 8.5))
+```
+:::
+:::::
+
+::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
+**Interpretation:** **Bad-score policyholders cancel at 25% but 75% stay**; the stickiest cohort, likely lacking competitive alternatives. The insurer's attrition process fails to shed its worst risks; actively pricing Bad-score COMP_N to not-renew is more effective than passive stickiness. **Urban segments show consistently higher loss ratios than rural**. Island segments have dramatically wide CIs; the observed median loss ratio is statistically unreliable; pricing should apply an explicit uncertainty buffer at the 95th percentile of the CI, not the point estimate.
+:::
+
+------------------------------------------------------------------------
+
+## Slide 15 \| Conclusion & Reflection
+
+::::::: columns
+:::: {.column width="52%"}
+::: {style="font-size:0.90em; line-height:1.35;"}
+**What this exercise demonstrates**
+
+Visual analytics combined with statistical rigour, provides structured, evidence-based insights. Distributional visualisation, non-parametric testing, and explicit uncertainty quantification reveal patterns that summary statistics alone miss.
+
+**The role of the data analyst**
+
+A data analyst **surfaces patterns and quantifies associations; they do not make business decisions.** Translating findings into business strategies requires actuarial judgement, regulatory context, and commercial considerations beyond analytical scope.
+
+**Crucially: correlation ≠ causation** e.g., glass claimers showing higher claim frequencies describes a *pattern* but it does not establish that glass claims *cause* subsequent claims. Establishing causality requires controlled study designs that cross-sectional analysis cannot provide.
+
+**Limitations**
+
+-   `years_licensed` mis-specified; re-derivation needed
+
+-   Cross-sectional data; no causal inference
+:::
+::::
+
+:::: {.column width="48%"}
+::: {style="font-size:0.90em; line-height:1.35;"}
+**Further work required**
+
+🔬 Re-derive `years_licensed` as genuine experience years and retest as risk predictor
+
+🔬 Investigate interaction terms (COMP_N × Bad bonus; Luxury × Neutral) via multivariate GLM
+
+🔬 Temporal loss ratio trend analysis across 2022–2024 to detect deteriorating segments
+
+🔬 Apply credibility weighting to thin-data cells before pricing decisions
+
+📊 Enrich with geospatial data to model risk at postcode level
+
+📊 Link multi-year records to confirm glass claim predictive value in Year 2
+
+⚙️ Validate all findings with claims and pricing teams before rating engine changes
+
+⚙️ Commission actuarial review of COMP_N pricing adequacy as an **immediate priority**
+:::
+::::
+:::::::
