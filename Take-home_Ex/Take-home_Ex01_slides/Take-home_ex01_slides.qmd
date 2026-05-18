@@ -334,7 +334,7 @@ knitr::kable(kpi_tbl, format = "html", escape = FALSE,
 
 ::: {style="font-size:0.90em;"}
 | \# | Analysis | Chart Type | Rationale |
-|:-----------------|:-----------------|:-----------------|:-----------------|
+|:---|:---|:---|:---|
 | 4.1 | Portfolio composition by policy type | `ggbarstats()` + Pearson χ² | Plain bar only answers *how many*; `ggbarstats()` tests whether bonus score composition differs significantly across types |
 | 4.2 | Bonus score by business type | `ggbarstats()` + Pearson χ² | Tests whether new business carries materially worse risk profile than portfolio renewals |
 | 4.3 | Geographic distribution | Stacked 100% bar + count labels | Proportions **and** absolute volumes both matter; pure proportions hide the Islands segment's thin \~24,000-policy base |
@@ -353,7 +353,7 @@ knitr::kable(kpi_tbl, format = "html", escape = FALSE,
 
 ::: {style="font-size:0.85em;"}
 | Domain | Analysis | Chart | Rationale |
-|:-----------------|:-----------------|:-----------------|:-----------------|
+|:---|:---|:---|:---|
 | Conventional | Loss ratio by policy type | Violin + boxplot + Kruskal-Wallis | Reveals multi-modality; non-parametric for skewed data |
 | Conventional | Loss ratio by bonus score | `stat_halfeye` + Wilcoxon pairwise | Tests monotonic Good→Bad ordering statistically |
 | Conventional | Severity by fuel type | `stat_halfeye` + Wilcoxon (log) | Log scale mandatory; distinguishes location shift vs tail effect |
@@ -566,7 +566,7 @@ ggplot(insurance_viz, aes(x = driver_age)) +
 ::::: {.column width="52%"}
 ::: {style="font-size:0.90em;"}
 | Variable | Pattern | Implication |
-|:-----------------------|:-----------------------|:-----------------------|
+|:---|:---|:---|
 | **Policy type** | COMP_N: 3.5% Bad; TP: 1.6% | Adverse selection in comp. cover |
 | **Business type** | NB: 1.6% Bad vs 0.8% Portfolio | Acquisition absorbs worse risk |
 | **Municipality** | Islands: n ≈ 24,000 only | Estimates unreliable; need uncertainty buffer |
