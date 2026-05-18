@@ -1,105 +1,105 @@
 [
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-1-executive-summary",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-1-executive-summary",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-1-executive-summary",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-1-executive-summary",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 1 | Executive Summary",
     "text": "Slide 1 | Executive Summary\n\n\n\nA visual analytics investigation of 354,140 motor insurance policies from a Spanish non-life insurer (2022–2024) identifies structural profitability risks across product, demographic, behavioural, and geographic dimensions.\nFour critical findings demand underwriting attention:\n🔴 COMP_N (Comprehensive, No Excess): most loss-making product; 3.5% Bad-bonus policyholders confirms adverse selection; immediate actuarial review required\n🔴 Bonus score: statistically validated predictor; loss ratio increases monotonically Good→Bad (all Wilcoxon p &lt; 0.05); Bad-score policyholders drive disproportionate large-loss tail exposure\n🟠 Short-duration policies: systematically higher loss ratios confirm claim-then-cancel behaviour; structural premium inadequacy\n🟠 Glass claims are gateway events: bimodal frequency at 1–2 events/year confirms co-occurrence with broader claims; validates glass history as a renewal risk flag\n\n\nAlso: NB carries 2× adverse risk vs portfolio renewals · Bad-score policyholders: 75% retention · Urban &gt; Rural loss ratios · Island pricing statistically unreliable"
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-2-data-preparation",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-2-data-preparation",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-2-data-preparation",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-2-data-preparation",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 2 | Data Preparation",
     "text": "Slide 2 | Data Preparation\n\n\n\nImport: Explicit semicolon delimiter via read_delim(): prevents silent mis-parsing of the 47-column, 354,140-row file.\nQuality checks: Zero duplicates. Four variables with missing values: handled per-analysis (not global imputation), keeping each decision transparent.\nCategorical recoding: Raw codes (e.g. \"G\", \"NB\", \"U\") replaced with labels. bonus_score converted to ordered factor: enabling correct ordering in Wilcoxon tests and ridgeline plots.\nOutlier capping: 99th percentile cap on loss ratio and severity for visualisation only: all statistical tests use uncapped values.\nBinning: Driver/vehicle age binned into actuarial bands. Vehicle brands classified into three tiers. claim_breadth (number of distinct claim lines per policy) derived as a behavioural signal variable.\n\n\nPrinciple: Every wrangling decision is documented at the point of use: not globally applied,so the audit trail is always traceable.\n\n\n\n\n\n\n\n\n\n\n\n\nfuel_type (0.36%) and vehicle_value (0.14%) are the only meaningful gaps. Impact on downstream analyses is minimal; excluded only in analyses that use those variables."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-3-derived-kpis",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-3-derived-kpis",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-3-derived-kpis",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-3-derived-kpis",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 3 | Derived KPIs",
     "text": "Slide 3 | Derived KPIs\n\n\n\nWhy raw data is insufficient: The dataset has premiums, claims, incurred costs, and exposure; but none of the actuarial metrics needed to assess profitability or volatility. Six KPIs were derived as the analytical backbone.\nExposure-adjustment is non-negotiable: A 3-month policy and a 12-month policy generate the same raw claim count for zero incidents. total_exposure (policy years) normalises all KPIs; without it, short-duration segments appear artificially safer.\nDemographic variables tested: years_licensed and licence_age were derived to test whether driving experience predicts risk better than age.\n\n⚠️ Data quality finding: Both variables showed near-zero Spearman ρ with claim frequency; because age_driving_licence records the calendar year of licence issue, not years of experience. years_licensed is invalid as derived and requires re-specification before use in any model.\n\n\n\n\n\n\n\n\nKPI\nFormula\nInterpretation\n\n\n\n\nloss_ratio\nincurred / premium\nLR &gt; 1 = underwriting loss\n\n\nclaim_frequency\nclaims / exposure\nClaims per policy year\n\n\nclaim_severity\nincurred / claims\nAvg cost per claim event\n\n\npure_premium\nincurred / exposure\nRisk cost per policy year\n\n\nyears_licensed\nyear − lic_year\nExperience proxy ⚠️\n\n\nlicence_age\nage − years_lic\nAge at first licence"
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-4-analyses-overview-univariate",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-4-analyses-overview-univariate",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-4-analyses-overview-univariate",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-4-analyses-overview-univariate",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 4 | Analyses Overview: Univariate",
     "text": "Slide 4 | Analyses Overview: Univariate\n\n\n\n\n\n\n\n\n\n\n#\nAnalysis\nChart Type\nRationale\n\n\n\n\n4.1\nPortfolio composition by policy type\nggbarstats() + Pearson χ²\nPlain bar only answers how many; ggbarstats() tests whether bonus score composition differs significantly across types\n\n\n4.2\nBonus score by business type\nggbarstats() + Pearson χ²\nTests whether new business carries materially worse risk profile than portfolio renewals\n\n\n4.3\nGeographic distribution\nStacked 100% bar + count labels\nProportions and absolute volumes both matter; pure proportions hide the Islands segment’s thin ~24,000-policy base\n\n\n4.4\nDistribution of vehicle age\nHistogram + density overlay\nRight-skewed integer variable; density curve smooths the empirical shape\n\n\n4.5\nDistribution of vehicle value\nHistogram + density (log₁₀)\nMandatory log scale; two orders of magnitude spread compresses the modal range into invisibility on linear scale\n\n\n4.6\nDistribution of driver age\nHistogram + density + reference lines\nReference lines at 25 and 65 make actuarial risk thresholds immediately visible\n\n\n\n\n\nGuiding principle: Chart type is determined by the question, not convention. ggbarstats() replaces plain bars for categorical variables because the chi-square test is the primary analytical question. Log scale for vehicle value is a statistical necessity, not a stylistic choice."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-5-analyses-overview-bivariate",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-5-analyses-overview-bivariate",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-5-analyses-overview-bivariate",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-5-analyses-overview-bivariate",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 5 | Analyses Overview: Bivariate",
     "text": "Slide 5 | Analyses Overview: Bivariate\n\n\n\n\n\n\n\n\n\n\nDomain\nAnalysis\nChart\nRationale\n\n\n\n\nConventional\nLoss ratio by policy type\nViolin + boxplot + Kruskal-Wallis\nReveals multi-modality; non-parametric for skewed data\n\n\nConventional\nLoss ratio by bonus score\nstat_halfeye + Wilcoxon pairwise\nTests monotonic Good→Bad ordering statistically\n\n\nConventional\nSeverity by fuel type\nstat_halfeye + Wilcoxon (log)\nLog scale mandatory; distinguishes location shift vs tail effect\n\n\nConventional\nSeverity by vehicle age\ngeom_hex + GAM\nHexbin resolves 354K-row overplotting; GAM captures non-linearity\n\n\nDemographic\nLoss ratio by age bands\nRidgelines + quartile shading\n6-group distributional shape comparison, not just medians\n\n\nDemographic\nDriver age × vehicle age\nHeatmap (6×6)\nOnly compact format for 36-cell interaction matrix\n\n\nDemographic\nDriver age vs years licensed\nDual GAM + Spearman ρ\nSide-by-side comparison of two candidate risk predictors\n\n\nBrand/Status\nBrand tier: frequency vs severity\nSide-by-side stat_pointinterval\nDecomposes dimensions conflated in a single loss ratio\n\n\nBrand/Status\nBonus score by brand tier\nggbarstats() + χ²\nTests whether risk profile differs by brand tier\n\n\nBrand/Status\nPower-to-weight vs freq\ngeom_hex + GAM (faceted)\nTests performance-proxy signal across tiers\n\n\nBrand/Status\nRepair cost intensity\nRanked dotplot + CI\nCI width communicates estimation confidence\n\n\nBehavioural\nSerial claimer breadth\nHeatmap\nExposes anomalous multi-line claimers by bonus score\n\n\nBehavioural\nGlass claims gateway\nOverlaid density\nRight-tail differences confirm gateway signal\n\n\nBehavioural\nNew business vs portfolio\nggbetweenstats\nUnified violin + significance test + effect size\n\n\nLoyalty\nCancellation paradox\nggbarstats + density\nTwo-step: cancellation rate, then loss ratio of leavers\n\n\nLoyalty\nExposure duration\nRidgelines (4 bands)\nShape comparison across short vs full duration\n\n\nGeographic\nLoss ratio by geography\nPoint-interval 95%+99% CI\nCI width is the primary finding for island segments"
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-6-univariate-portfolio-composition",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-6-univariate-portfolio-composition",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-6-univariate-portfolio-composition",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-6-univariate-portfolio-composition",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 6 | Univariate: Portfolio Composition",
     "text": "Slide 6 | Univariate: Portfolio Composition\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nInterpretation: χ² (p &lt; 0.001) confirms bonus composition is not independent of policy type. COMP_N carries 3.5% Bad-score policyholders; nearly 3× the rate of other types, textbook adverse selection. New Business carries 2× the Bad-score rate of Portfolio renewals (1.6% vs 0.8%), confirming the acquisition channel absorbs materially worse risk before renewal underwriting filters apply."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-7-univariate-geographic-vehicle-distributions",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-7-univariate-geographic-vehicle-distributions",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-7-univariate-geographic-vehicle-distributions",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-7-univariate-geographic-vehicle-distributions",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 7 | Univariate: Geographic & Vehicle Distributions",
     "text": "Slide 7 | Univariate: Geographic & Vehicle Distributions\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nInterpretation: Islands has only ~24,000 policies; too few for statistically reliable loss ratio estimates (wide CIs confirmed in Slide 14). Vehicle age is right-skewed (mode 20–25 yrs), indicating an older fleet where the non-linear severity curve applies at both extremes. Vehicle value is log-normally distributed (median €24,700)which makes log scale is mandatory; linear scale compresses the modal range into an unreadable sliver."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-8-univariate-driver-age-distribution",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-8-univariate-driver-age-distribution",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-8-univariate-driver-age-distribution",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-8-univariate-driver-age-distribution",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 8 | Univariate: Driver Age Distribution",
     "text": "Slide 8 | Univariate: Driver Age Distribution\n\n\n\n\n\n\n\n\n\n\n\n\n\nPortfolio is concentrated in the 35–60 band; the actuarially safest segment.\n\nUnder-25 drivers are markedly under-represented; higher premiums deter uptake, meaning the insurer attracts only the least price-sensitive young drivers\nOver-65 drivers taper naturally with licence cessation\n\nStatistical implication: The U-shaped age–risk relationship (young and old drivers claiming more) is well established. However, because both risk extremes are thinly populated here, the age signal is statistically diluted; explaining why the Spearman ρ between driver age and claim frequency is near-zero (−0.035) in Slide 12. This is a portfolio composition effect, not evidence that age is irrelevant to risk."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-9-univariate-summary-of-findings",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-9-univariate-summary-of-findings",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-9-univariate-summary-of-findings",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-9-univariate-summary-of-findings",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 9 | Univariate: Summary of Findings",
     "text": "Slide 9 | Univariate: Summary of Findings\n\n\n\n\n\n\n\n\n\n\n\nVariable\nPattern\nImplication\n\n\n\n\nPolicy type\nCOMP_N: 3.5% Bad; TP: 1.6%\nAdverse selection in comp. cover\n\n\nBusiness type\nNB: 1.6% Bad vs 0.8% Portfolio\nAcquisition absorbs worse risk\n\n\nMunicipality\nIslands: n ≈ 24,000 only\nEstimates unreliable; need uncertainty buffer\n\n\nVehicle age\nMode 20–25 yrs; right-skewed\nNon-linear severity at both extremes\n\n\nVehicle value\nLog-normal; median €24,700\nLog-scale severity loadings required\n\n\nDriver age\n35–60 dominated; thin extremes\nU-shape diluted; signal at extremes\n\n\n\n\n\nCross-variable insight: An older vehicle fleet + middle-aged driver base means demographic extremes are bypassed. Risk concentration is instead occurring in the product and acquisition channel dimensions (COMP_N adverse selection, NB vs Portfolio gap)."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-10-bivariate-loss-ratio--policy-type-bonus-score",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-10-bivariate-loss-ratio--policy-type-bonus-score",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-10-bivariate-loss-ratio--policy-type-bonus-score",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-10-bivariate-loss-ratio--policy-type-bonus-score",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 10 | Bivariate: Loss Ratio- Policy Type & Bonus Score",
     "text": "Slide 10 | Bivariate: Loss Ratio- Policy Type & Bonus Score\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nInterpretation: COMP_N has the highest median loss ratio and widest violin- simultaneously the least profitable and most volatile product. Violin width reveals substantial mass above break-even, not just outliers (Kruskal-Wallis p &lt; 0.05). Loss ratio increases monotonically Good→Bad with all pairwise tests significant. Bad-score half-eye shows a heavier right tail- bad policyholders drive disproportionate large-loss exposure, which is what drives capital requirements, not the mean."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-11-bivariate-claim-severity---fuel-type-vehicle-age",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-11-bivariate-claim-severity---fuel-type-vehicle-age",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-11-bivariate-claim-severity---fuel-type-vehicle-age",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-11-bivariate-claim-severity---fuel-type-vehicle-age",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 11 | Bivariate: Claim Severity - Fuel Type & Vehicle Age",
     "text": "Slide 11 | Bivariate: Claim Severity - Fuel Type & Vehicle Age\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nInterpretation: Diesel vehicles show statistically higher severity (Wilcoxon p = 0.04) - a consistent median location shift, not a tail effect, supporting a 5–10% diesel severity loading. Vehicle age shows a non-linear U-shape: severity peaks for new vehicles (high replacement value), declines through mid-years, then rises again for very old vehicles (rare parts, specialist labour). A simple declining age factor in the rating engine is therefore incorrect."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-12-bivariate-demographic-drivers",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-12-bivariate-demographic-drivers",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-12-bivariate-demographic-drivers",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-12-bivariate-demographic-drivers",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 12 | Bivariate: Demographic Drivers",
     "text": "Slide 12 | Bivariate: Demographic Drivers\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nInterpretation: Ridgelines confirm the actuarial U-shape - 18–25 band widest and most right-skewed; 36–55 most compact and closest to break-even; 65+ moderately elevated. Heatmap reveals an interaction: 65+ drivers in 0–3-year vehicles show elevated claim frequency; consistent with older drivers adapting to unfamiliar new vehicle technology. Driver age and years_licensed both show near-zero Spearman ρ, a consequence of the under-25 and over-65 extremes being thinly represented in this portfolio (confirmed in Slide 8)."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-13-bivariate-brand-status-behavioural-drivers",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-13-bivariate-brand-status-behavioural-drivers",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-13-bivariate-brand-status-behavioural-drivers",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-13-bivariate-brand-status-behavioural-drivers",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 13 | Bivariate: Brand, Status & Behavioural Drivers",
     "text": "Slide 13 | Bivariate: Brand, Status & Behavioural Drivers\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nInterpretation: Brand tier does not discriminate claim frequency (all tiers identical), but Luxury’s 99% CI extends further upward for severity, confirming disproportionately costly extreme claims. Apply brand tier as a severity tail loading, not a frequency loading. Glass claimers show a bimodal distribution peaking at 1.0 and 2.0 events/year, they almost never appear at zero frequency. Glass claims are confirmed gateway events that co-occur with broader claims activity; a 10–15% frequency loading at renewal for prior-year glass claimers is supported."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-14-bivariate-loyalty-geographic-drivers",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-14-bivariate-loyalty-geographic-drivers",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-14-bivariate-loyalty-geographic-drivers",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-14-bivariate-loyalty-geographic-drivers",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 14 | Bivariate: Loyalty & Geographic Drivers",
     "text": "Slide 14 | Bivariate: Loyalty & Geographic Drivers\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nInterpretation: Bad-score policyholders cancel at 25% but 75% stay; the stickiest cohort, likely lacking competitive alternatives. The insurer’s attrition process fails to shed its worst risks; actively pricing Bad-score COMP_N to not-renew is more effective than passive stickiness. Urban segments show consistently higher loss ratios than rural. Island segments have dramatically wide CIs; the observed median loss ratio is statistically unreliable; pricing should apply an explicit uncertainty buffer at the 95th percentile of the CI, not the point estimate."
   },
   {
-    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-15-conclusion-reflection",
-    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_ex01_slides.html#slide-15-conclusion-reflection",
+    "objectID": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-15-conclusion-reflection",
+    "href": "Take-home_Ex/Take-home_Ex01_slides/Take-home_Ex01_slides.html#slide-15-conclusion-reflection",
     "title": "Visual Analytics for Motor Vehicle Insurance",
     "section": "Slide 15 | Conclusion & Reflection",
     "text": "Slide 15 | Conclusion & Reflection\n\n\n\nWhat this exercise demonstrates\nVisual analytics combined with statistical rigour, provides structured, evidence-based insights. Distributional visualisation, non-parametric testing, and explicit uncertainty quantification reveal patterns that summary statistics alone miss.\nThe role of the data analyst\nA data analyst surfaces patterns and quantifies associations; they do not make business decisions. Translating findings into business strategies requires actuarial judgement, regulatory context, and commercial considerations beyond analytical scope.\nCrucially: correlation ≠ causation e.g., glass claimers showing higher claim frequencies describes a pattern but it does not establish that glass claims cause subsequent claims. Establishing causality requires controlled study designs that cross-sectional analysis cannot provide.\nLimitations\n\nyears_licensed mis-specified; re-derivation needed\nCross-sectional data; no causal inference\n\n\n\n\nFurther work required\n🔬 Re-derive years_licensed as genuine experience years and retest as risk predictor\n🔬 Investigate interaction terms (COMP_N × Bad bonus; Luxury × Neutral) via multivariate GLM\n🔬 Temporal loss ratio trend analysis across 2022–2024 to detect deteriorating segments\n🔬 Apply credibility weighting to thin-data cells before pricing decisions\n📊 Enrich with geospatial data to model risk at postcode level\n📊 Link multi-year records to confirm glass claim predictive value in Year 2\n⚙️ Validate all findings with claims and pricing teams before rating engine changes\n⚙️ Commission actuarial review of COMP_N pricing adequacy as an immediate priority"
