@@ -7,12 +7,12 @@ execute:
   eval: true
   echo: true
   warning: false
-  freeze: true
+  freeze: false
 ---
 
 ## Visual Analytics for Data Discovery: Exploring a Motor Vehicle Insurance Portfolio
 
----
+------------------------------------------------------------------------
 
 ## 1 Introduction
 
@@ -29,7 +29,7 @@ The analyses in this report are organised across two levels:
 -   **Univariate:** Explore the distribution and composition of key categorical and numerical variables.
 -   **Bivariate:** Investigate conventional, demographic, brand-and-status, behavioural, loyalty, and geographic drivers of portfolio profitability and volatility.
 
----
+------------------------------------------------------------------------
 
 ## 2 Getting Started
 
@@ -38,7 +38,7 @@ The analyses in this report are organised across two levels:
 The table below justifies each visualisation choice against visual analytics best practices. The guiding principle is: *a chart is not chosen for its aesthetics but for the question it answers most honestly*.
 
 | Analysis | Selected technique | Rationale |
-|---|---|---|
+|------------------------|------------------------|------------------------|
 | Portfolio composition by policy type | `ggbarstats()` (stacked proportion + χ²) | Shows proportional composition and tests whether bonus score distribution differs significantly across policy types – more informative than a plain stacked bar |
 | Composition by bonus score | `ggbarstats()` (stacked proportion + χ²) | Tests the association between claims history and business type; plain bar answers "how many?" while `ggbarstats()` answers "does the composition differ significantly?" |
 | Geographic distribution | Grouped bar + `geom_text` | Municipality type is a small-cardinality nominal variable; policy counts and proportions are both important – pure proportions would obscure the Island segment's tiny volume |
@@ -124,7 +124,7 @@ glimpse(insurance)
 cat("Rows:", nrow(insurance), "| Columns:", ncol(insurance), "\n")
 ```
 
----
+------------------------------------------------------------------------
 
 ## 3 Data Wrangling
 
@@ -181,10 +181,10 @@ insurance <- insurance |>
 The raw dataset does not contain standard actuarial profitability or volatility metrics. These are derived as follows, with all downstream analyses pivoting on these variables:
 
 | KPI | Formula | Interpretation |
-|---|---|---|
-| `loss_ratio` | `total_incurred / total_premium` | Profitability: values > 1 indicate underwriting losses |
+|------------------------|------------------------|------------------------|
+| `loss_ratio` | `total_incurred / total_premium` | Profitability: values \> 1 indicate underwriting losses |
 | `claim_frequency` | `total_claims / total_exposure` | Volatility: claims per policy year |
-| `claim_severity` | `total_incurred / total_claims` (claims > 0) | Average cost per claim event |
+| `claim_severity` | `total_incurred / total_claims` (claims \> 0) | Average cost per claim event |
 | `pure_premium` | `total_incurred / total_exposure` | Risk cost per policy year |
 | `years_licensed` | `year − age_driving_licence` | Driving experience proxy |
 | `licence_age` | `driver_age − years_licensed` | Age at which the driver was first licensed |
@@ -224,7 +224,7 @@ insurance_viz <- insurance |>
 
 ### 3.5 Creating Binned and Derived Variables
 
-Driver age and vehicle age are binned into actuarially meaningful bands. Vehicle brands are classified into three tiers based on market positioning. Claim breadth (the number of distinct coverage lines with at least one claim) is derived as a behavioural signal variable:
+Driver age and vehicle age are binned into analytically meaningful bands that reflect common age groupings used in motor insurance research (Meng et al., 2022; ABI, 2009). Vehicle brands are classified into three tiers based on market positioning. Claim breadth (the number of distinct coverage lines with at least one claim) is derived as a behavioural signal variable:
 
 ```{r}
 #| label: ex01-create-bins
@@ -266,7 +266,7 @@ insurance_viz <- insurance_viz |>
   )
 ```
 
----
+------------------------------------------------------------------------
 
 ## 4 Univariate Analysis
 
@@ -274,7 +274,7 @@ insurance_viz <- insurance_viz |>
 
 **Technique justification:** `ggbarstats()` from **ggstatsplot** is used rather than a plain stacked bar chart. A stacked bar tells us *how many* policies exist per type. The more important analytical question is: *does the risk profile of policyholders differ significantly across policy types?* By placing `bonus_score` on the fill aesthetic and `policy_type` on the y-axis, `ggbarstats()` answers both questions simultaneously – proportional composition and a Pearson chi-square test of whether the bonus score distribution is independent of policy type.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -357,18 +357,17 @@ ggbarstats(
   )
 )
 ```
-
 :::
 
-**Interpretation:** The chi-square test confirms a statistically significant association between policy type and bonus score (p < 0.001). Comprehensive cover without excess (COMP_N) carries a notably higher proportion of "Bad" bonus score policyholders than basic third-party (TP) – a textbook adverse selection pattern where higher-risk individuals self-select into more protective coverage. This directly questions whether COMP_N premiums adequately load for this skewed risk intake.
+**Interpretation:** The chi-square test confirms a statistically significant association between policy type and bonus score (p \< 0.001). Comprehensive cover without excess (COMP_N) carries a notably higher proportion of "Bad" bonus score policyholders than basic third-party (TP) – a textbook adverse selection pattern where higher-risk individuals self-select into more protective coverage. This directly questions whether COMP_N premiums adequately load for this skewed risk intake.
 
----
+------------------------------------------------------------------------
 
 ### 4.2 Portfolio Composition by Driver Bonus Score
 
 **Technique justification:** `ggbarstats()` is again used, this time with `business_type` on the y-axis. The question shifts: *does the bonus score profile differ between new business and portfolio renewals?* New business policies have not passed through a renewal underwriting filter – if they carry a materially worse bonus score distribution, the insurer is absorbing adversely selected risk through its acquisition channel.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -442,18 +441,17 @@ ggbarstats(
   )
 )
 ```
-
 :::
 
 **Interpretation:** A significant chi-square result with a higher share of "Bad" bonus scores in new business (NB) than portfolio (P) would confirm that the acquisition channel is less effectively screened than the renewal book. This is a structural pricing problem: new business premiums should incorporate an adverse selection loading relative to renewal premiums for equivalent coverage types.
 
----
+------------------------------------------------------------------------
 
 ### 4.3 Geographic Distribution by Municipality Type and Circulation Area
 
 **Technique justification:** A grouped `geom_col()` chart with policy count annotations is used rather than a pure stacked proportion bar. Both absolute volume and proportional split are analytically important here: the Islands segment's small policy count is as important a fact as its share of the portfolio, because it directly affects the statistical reliability of any downstream loss ratio estimate for that segment. A proportion-only chart would obscure this volume disparity.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -553,18 +551,17 @@ ggplot(geo_counts,
     y        = "Proportion (%)"
   )
 ```
-
 :::
 
 **Interpretation:** Inland Urban dominates the portfolio by a wide margin. The Islands segment has a markedly smaller count – a fact that becomes analytically critical in Section 10: any observed island loss ratio is based on a thin data sample, and confidence intervals will be correspondingly wide. Pricing decisions for this segment should treat the observed median as an uncertain estimate, not a reliable rate basis.
 
----
+------------------------------------------------------------------------
 
 ### 4.4 Distribution of Vehicle Age
 
 **Technique justification:** `geom_histogram()` with `geom_density()` overlay is the standard choice for a continuous variable examined in isolation. Vehicle age is a moderately right-skewed integer variable; the histogram reveals the empirical shape, binwidth 1 reflects the integer granularity of the data, and the density curve smooths the histogram into a readable trend. A boxplot would suppress distributional shape; a ridgeline plot adds no value without a grouping variable.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -628,18 +625,17 @@ ggplot(insurance_viz |> filter(!is.na(vehicle_age)),
     y        = "Density"
   )
 ```
-
 :::
 
-**Interpretation:** The distribution is right-skewed with a mode around 20–25 years. The long tail of very old vehicles (>40 years) represents a small segment likely insured under basic third-party cover where comprehensive replacement value is not relevant. The modal age band will be revisited in the severity-by-vehicle-age analysis in Section 5.4, where older vehicles show different cost profiles to newer ones.
+**Interpretation:** The distribution is right-skewed with a mode around 20–25 years. The long tail of very old vehicles (\>40 years) represents a small segment likely insured under basic third-party cover where comprehensive replacement value is not relevant. The modal age band will be revisited in the severity-by-vehicle-age analysis in Section 5.4, where older vehicles show different cost profiles to newer ones.
 
----
+------------------------------------------------------------------------
 
 ### 4.5 Distribution of Vehicle Value
 
-**Technique justification:** A log₁₀ scale histogram with density overlay is mandatory for this variable. Vehicle value spans two orders of magnitude (€1,630 to €374,000). On the linear scale, the long right tail compresses the modal range – where most policies concentrate – into an unreadably narrow band at the far left. The log scale converts multiplicative spread into additive spread, revealing the near-normal log-distribution that is standard for insured asset values in actuarial theory.
+**Technique justification:** The vehicle value distribution is right-skewed and spans two orders of magnitude (€1,630 to €374,000). The log₁₀ scale is applied because insurance loss and asset value data are widely modelled using the lognormal distribution in actuarial practice (Klugman, Panjer & Willmot, 2019; Frees et al., *Loss Data Analytics*; Venegas-Martínez et al., 2014), a distribution whose defining property is that the logarithm of the variable is normally distributed. Plotting on a log scale therefore converts the multiplicative spread of the raw data into an additive spread, revealing the near-normal shape that confirms the lognormal data-generating process (Wilke, 2019).
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -705,18 +701,17 @@ ggplot(insurance_viz |> filter(!is.na(vehicle_value)),
     y        = "Density"
   )
 ```
-
 :::
 
-**Interpretation:** The log-normal shape confirms the actuarial expectation for insured asset value distributions. The median declared value of approximately €24,700 is the central reference point for pricing adequacy: vehicles significantly above this median may be under-priced on severity assumptions if the rating engine does not apply a sufficiently steep vehicle value loading factor.
+**Interpretation:** On the log₁₀ scale, the density overlay shows a near-symmetric, bell-shaped curve indicating that vehicle values in this portfolio are spread multiplicatively rather than additively. The log scale is applied because the raw data spans two orders of magnitude (€1,630 to €374,000), a range within which a linear axis would compress the majority of policies into an unreadable sliver at the left edge (Wilke, 2019). The median declared value is approximately €24,700. Notably, vehicle value data is skewed right on the raw scale, which is common for monetary variables where a small number of high-value policies pull the mean substantially above the median, as observed in the data here.
 
----
+------------------------------------------------------------------------
 
 ### 4.6 Distribution of Driver Age
 
-**Technique justification:** `geom_histogram()` + `geom_density()` with vertical reference lines. Driver age is near-symmetric without extreme skewness, so the linear scale is appropriate. The reference lines at ages 25 and 65 add interpretive structure corresponding to the conventional young-driver and senior-driver actuarial risk thresholds – making the population below 25 and above 65 immediately visible without requiring the reader to estimate these boundaries from memory.
+**Technique justification:** `geom_histogram()` + `geom_density()` with vertical reference lines. Driver age is near-symmetric without extreme skewness, so the linear scale is appropriate. Reference lines at ages 25 and 65 mark the boundary age bands used in prior actuarial research on driver risk (Meng et al., 2022; Cappelletti, 2023; ABI, 2009), making the populations below 25 and above 65 immediately visible in the chart without requiring the reader to estimate these boundaries from memory.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -776,12 +771,11 @@ ggplot(insurance_viz, aes(x = driver_age)) +
     y        = "Density"
   )
 ```
-
 :::
 
-**Interpretation:** The portfolio is concentrated in the 35–60 age band. Young drivers under 25 are markedly under-represented relative to the general driving population – a consequence of higher premiums deterring uptake in that segment. The thinning of the distribution above 65 means the older-driver segment, while present, contributes a small volume of policies. Both observations inform the interpretation of the U-shaped age–risk relationship explored in Section 6.1.
+**Interpretation:** The portfolio is concentrated in the 35–60 age band, with both extremes thinly represented. Young drivers under 25 account for a small share of policies; drivers over 65 taper off gradually. Whether the thin representation of the extremes is due to pricing, voluntary non-participation, or other market factors cannot be determined from this dataset alone. What can be observed directly is that both risk extremes are under-represented relative to the middle-age band; a composition fact that affects the interpretability of age-based analyses in Section 6.1.
 
----
+------------------------------------------------------------------------
 
 ## 5 Bivariate Analysis: Conventional Drivers
 
@@ -789,7 +783,7 @@ ggplot(insurance_viz, aes(x = driver_age)) +
 
 **Technique justification:** `geom_violin()` with a nested `geom_boxplot()` and Kruskal-Wallis test via `stat_compare_means()`. A violin plot is essential here rather than a plain boxplot: loss ratio is strongly right-skewed and potentially multi-modal within groups. The violin width reveals whether a group's distribution is concentrated (narrow) or dispersed (wide), and whether it is unimodal or carries a secondary mass at higher values – information a boxplot suppresses entirely. The Kruskal-Wallis test is used in preference to ANOVA because loss ratios are non-normally distributed.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -865,18 +859,17 @@ ggplot(
     y        = "Loss\nRatio"
   )
 ```
-
 :::
 
-**Interpretation:** The Kruskal-Wallis test confirms statistically significant differences in loss ratio across policy types (p < 0.05). Comprehensive cover without excess (COMP_N) exhibits the highest median loss ratio and the widest violin, indicating it is simultaneously the least profitable and the most volatile product type. Basic third-party (TP) policies are tightly concentrated near zero, reflecting the minimal coverage provided. Policies above the break-even line (LR > 1) represent active underwriting losses.
+**Interpretation:** The Kruskal-Wallis test confirms statistically significant differences in loss ratio across policy types (p \< 0.05). Comprehensive cover without excess (COMP_N) exhibits the highest median loss ratio and the widest violin, indicating it is simultaneously the least profitable and the most volatile product type. Basic third-party (TP) policies are tightly concentrated near zero, reflecting the minimal coverage provided. Policies above the break-even line (LR \> 1) represent active underwriting losses.
 
----
+------------------------------------------------------------------------
 
 ### 5.2 Loss Ratio by Bonus Score
 
 **Technique justification:** `stat_halfeye()` from **ggdist** combined with `geom_boxplot()`, with pairwise Wilcoxon tests. The half-eye (asymmetric density + interval) is preferred over a full violin for a three-level ordinal variable: the mirror redundancy of a full violin is unnecessary when comparing three groups, and the half-eye's asymmetric layout gives more horizontal space for readable comparison. Pairwise tests confirm whether the Good → Neutral → Bad ordering is statistically monotonic – testing the actuarial validity of the scoring system.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -956,18 +949,17 @@ ggplot(
   ) +
   theme(legend.position = "none")
 ```
-
 :::
 
-**Interpretation:** Loss ratio increases monotonically from Good to Bad bonus score, and all pairwise differences are statistically significant – validating the bonus classification as a genuine predictor of future loss experience. The "Bad" score half-eye shows a heavier right tail than "Good" or "Neutral", meaning Bad-score policyholders are associated with disproportionately large individual losses, not just marginally higher average frequency. This tail behaviour is actuarially significant for reserving, where the 95th percentile loss rather than the mean drives capital requirements.
+**Interpretation:** Loss ratio increases monotonically from Good to Bad bonus score, and all pairwise Wilcoxon tests are statistically significant, confirming that within this dataset, the bonus score classification is associated with meaningfully different loss ratio distributions. The "Bad" score half-eye shows a heavier right tail than "Good" or "Neutral": a larger share of Bad-score policies produce very high loss ratios, not merely a marginal upward shift in the median. This right-tail concentration is visible in the distributional shape with the 4th quartile (yellow shading, if viewed as a ridgeline) extending further rightward for Bad-score policyholders than for Good-score ones. Note that this is an observed association in the data, not a causal claim about the scoring system's predictive validity out of sample.
 
----
+------------------------------------------------------------------------
 
 ### 5.3 Claim Severity by Fuel Type
 
-**Technique justification:** `stat_halfeye()` + `geom_boxplot()` on a log₁₀ scale with a Wilcoxon test. Claim severity follows a log-normal distribution – using the log scale is not a stylistic choice but a statistical necessity. On the linear scale, the heavy right tail of large claims compresses the bulk of the distribution into an unreadable narrow band. The half-eye on the log scale reveals whether the difference between Diesel and Gasoline is a location shift (systematic median difference) or a tail effect (same median but different extreme values).
+**Technique justification:** `stat_halfeye()` + `geom_boxplot()` on a log₁₀ scale with a Wilcoxon test. Claim severity in this dataset is right-skewed with a long tail of large claim amounts, as visible in the raw distribution. The log₁₀ scale is applied because the observed spread covers several orders of magnitude. Using a linear scale would compress the majority of claims into an unreadable narrow band at the left edge of the chart (Wilke, 2019). Whether the underlying distribution follows a lognormal or another right-skewed family (e.g. gamma, Pareto) is a modelling question beyond the scope of this visual analysis; the log scale is chosen for visual clarity, not to assert a specific parametric form. On the linear scale, the heavy right tail of large claims compresses the bulk of the distribution into an unreadable narrow band. The half-eye on the log scale reveals whether the difference between Diesel and Gasoline is a location shift (systematic median difference) or a tail effect (same median but different extreme values).
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -1053,18 +1045,17 @@ ggplot(
   ) +
   theme(legend.position = "none")
 ```
-
 :::
 
-**Interpretation:** Diesel vehicles exhibit statistically higher claim severity than gasoline vehicles (Wilcoxon p < 0.05). This reflects their higher average declared values (diesel vehicles tend to be larger family vehicles and SUVs) and greater component replacement costs. Crucially, if the severity distributions are similar in *shape* but shifted in median, this is a systematic pricing issue – diesel policies should carry a consistently higher severity loading than gasoline equivalents, irrespective of any other rating factor.
+**Interpretation:** Diesel vehicles exhibit statistically higher claim severity than gasoline vehicles (Wilcoxon p \< 0.05). This reflects their higher average declared values (diesel vehicles tend to be larger family vehicles and SUVs) and greater component replacement costs. Crucially, if the severity distributions are similar in *shape* but shifted in median, this is a systematic pricing issue – diesel policies should carry a consistently higher severity loading than gasoline equivalents, irrespective of any other rating factor.
 
----
+------------------------------------------------------------------------
 
 ### 5.4 Claim Severity by Vehicle Age
 
 **Technique justification:** `geom_hex()` + `geom_smooth(method = "gam")` with a log₁₀ y-axis. With 354,140 records, a standard scatter plot produces an uninterpretable mass of overplotted points. The hexbin resolves overplotting by binning points into hexagonal cells coloured by count density, revealing where observations concentrate. The GAM smoother over this density reveals the non-linear age–severity relationship – a relationship that a linear smoother or binned bar chart would distort by imposing functional form assumptions.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -1122,12 +1113,11 @@ ggplot(
     y        = "Claim Severity\n(€, log scale)"
   )
 ```
-
 :::
 
 **Interpretation:** The GAM smoother reveals a non-linear relationship: severity is highest for newer vehicles (high replacement value), declines through the middle age band, then shows a slight uptick for very old vehicles where rare parts and specialist labour inflate repair costs relative to the vehicle's declared value. The hexbin confirms that most observations concentrate in the 15–35-year age band. The widening confidence ribbon at the extremes reflects reduced data volume and increased estimation uncertainty – a fact that rating models should incorporate as uncertainty margins when pricing low-volume age bands.
 
----
+------------------------------------------------------------------------
 
 ## 6 Bivariate Analysis: Demographic Drivers
 
@@ -1135,7 +1125,7 @@ ggplot(
 
 **Technique justification:** `stat_density_ridges()` from **ggridges** with quantile shading (`quantiles = 4`, `calc_ecdf = TRUE`). Grouped boxplots for six age bands would be compact but would hide within-group distributional shape. The actuarial hypothesis – a U-shaped risk curve with elevated loss ratios at young and old ages – manifests not just as a median shift but as a widening and right-skewing of the within-band distribution. Ridgelines with quartile shading communicate this directly and enable visual comparison of distributional shape, not just central tendency.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -1233,18 +1223,17 @@ ggplot(
     legend.position = "right"
   )
 ```
-
 :::
 
-**Interpretation:** The 18–25 age band exhibits the widest and most right-skewed distribution – consistent with elevated claim frequency and severity for young drivers. The 36–55 bands show the most compact distributions with the lowest median loss ratios, confirming this is the most actuarially favourable segment. The 65+ band shows a moderately elevated median loss ratio, confirming the U-shaped pattern. Wider IQRs at both age extremes indicate greater within-group variability, which is relevant for reserving – actuaries should apply higher variability margins when projecting ultimate losses for these segments.
+**Interpretation:** The 18–25 age band shows the widest distribution and the heaviest right skew among all six bands with a larger share of policies in this group producing high loss ratios compared to middle-age bands. The 36–55 bands show the most compact distributions with the lowest median loss ratios. The 65+ band shows a moderately wider distribution than the 36–55 group and a slightly elevated median. These observed differences in distributional shape and spread are consistent with the patterns reported in prior driver risk research (Meng et al., 2022; Cappelletti, 2023), though caution is warranted given the thin representation of the under-25 and over-65 segments in this portfolio. The estimates for those bands carry more uncertainty than those for the well-populated middle-age bands.
 
----
+------------------------------------------------------------------------
 
 ### 6.2 Older Driver + Young Car Interaction
 
 **Technique justification:** `geom_tile()` heatmap with `geom_text()` cell labels. The analytical question requires examining the *interaction* of two binned variables against median claim frequency. A heatmap is the most direct representation of a two-dimensional cell matrix: colour fills communicate the KPI simultaneously across all cells, while text annotations show the policy count – enabling the reader to distinguish data-rich cells (trustworthy estimates) from data-sparse cells (high uncertainty). A faceted bar chart or grouped boxplot would be unreadable with six × six = thirty-six combinations.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -1348,18 +1337,17 @@ ggplot(heatmap_data,
   ) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1))
 ```
-
 :::
 
-**Interpretation:** The 65+ driver combined with 0–3-year vehicles shows elevated claim frequency relative to the same age group driving older vehicles – consistent with the hypothesis that older drivers face adjustment challenges with newer vehicle technology (advanced driver assistance systems, unfamiliar interfaces). The 18–25 × 0–3 cell also shows elevated frequency, reflecting the compounding of inexperience and unfamiliar high-specification vehicles. Cells with very small policy counts should not be used in isolation for pricing – they require credibility-weighting with adjacent cells or portfolio average assumptions.
+**Interpretation:** The 65+ × 0–3 year vehicle cell shows a higher mean claim frequency than other 65+ cells in the heatmap. One possible explanation is that older drivers operating vehicles very different from what they previously drove may face adjustment challenges, though this dataset does not contain information to confirm that mechanism directly. The 18–25 × 0–3 cell similarly shows elevated frequency relative to adjacent cells. Both observations are based on the mean claim frequency visible in the heatmap. Cells with small policy counts (shown in the text annotations) carry more uncertainty and should be interpreted with caution; the values in those cells are less stable estimates than those in data-rich cells.
 
----
+------------------------------------------------------------------------
 
 ### 6.3 Years Licensed vs Driver Age: Which Is the Better Risk Predictor?
 
 **Technique justification:** Dual `geom_hex()` + `geom_smooth(method = "gam")` panels composed side-by-side with **patchwork**, with annotated Spearman ρ values. The side-by-side design makes the comparison direct: the reader does not need to hold one chart in memory while viewing the other. Hexbin manages overplotting. GAM smoothers capture non-linearity simultaneously in both predictors. The Spearman ρ annotation provides a single scalar summary of predictive strength to anchor the visual comparison.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -1475,12 +1463,11 @@ p_age + p_lic +
     )
   )
 ```
-
 :::
 
-**Interpretation:** The GAM curves and Spearman ρ values reveal a counterintuitive finding. Driver age (left panel) shows Spearman ρ = −0.035, indicating a very weak negative association with claim frequency – older drivers claim very slightly less, but the relationship is almost flat and statistically negligible. Years licensed (right panel) is even weaker at ρ = 0.007, essentially zero correlation. Critically, the years licensed chart shows a near-vertical concentration of data around the year 2000 – this is because `age_driving_licence` records the *calendar year* the licence was issued, not years of experience. For a 2022–2024 dataset, most licences cluster in the late 1990s and early 2000s, creating no meaningful spread. **The `years_licensed` variable as derived here is not a valid risk predictor in this dataset** – it would need to be re-derived as `year − age_driving_licence` capped to reflect genuine experience years. The near-zero ρ for both variables, combined with the near-flat GAM smoothers, suggests that within this Spanish portfolio – which skews heavily toward middle-aged drivers – both age and experience fail to discriminate claim frequency at the individual policy level. This does not mean age has no role; it means the actuarial age signal operates primarily at the extremes (under 25, over 65) which are thinly represented here, as confirmed in the driver age distribution in Section 4.6.
+**Interpretation:** The GAM curves and Spearman ρ values reveal a counterintuitive finding. Driver age (left panel) shows Spearman ρ = −0.035, indicating a very weak negative association with claim frequency – older drivers claim very slightly less, but the relationship is almost flat and statistically negligible. Years licensed (right panel) is even weaker at ρ = 0.007, essentially zero correlation. Critically, the years licensed chart shows a near-vertical concentration of data around the year 2000. This is because `age_driving_licence` records the *calendar year* the licence was issued, not years of experience. For a 2022–2024 dataset, most licences cluster in the late 1990s and early 2000s, creating no meaningful spread. **The `years_licensed` variable as derived here is not a valid risk predictor in this dataset**. It would need to be re-derived as `year − age_driving_licence` capped to reflect genuine experience years. The near-zero ρ for both variables, combined with the near-flat GAM smoothers, suggests that within this Spanish portfolio which skews heavily toward middle-aged drivers. Both age and experience fail to discriminate claim frequency at the individual policy level. This is a portfolio composition effect: the age extremes that prior research associates with higher risk (Meng et al., 2022; Cappelletti, 2023) are thinly represented here, as confirmed in Section 4.6. The near-zero ρ reflects what is observable in this portfolio, not a universal statement about age as a risk factor.
 
----
+------------------------------------------------------------------------
 
 ## 7 Bivariate Analysis: Brand and Status Drivers
 
@@ -1488,7 +1475,7 @@ p_age + p_lic +
 
 **Technique justification:** Side-by-side `stat_pointinterval()` panels from **ggdist** – one for claim frequency, one for claim severity – composed with **patchwork**. A single loss ratio chart conflates two fundamentally different risk dimensions: frequency (how often) and severity (how much each time). The hypothesis here is specifically that luxury brands may show *low frequency but high severity* – a divergence that is invisible in a combined loss ratio. Presenting both dimensions side-by-side with median + CI makes this decomposition explicit.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -1614,18 +1601,17 @@ p_freq + p_sev +
   ) &
   theme(legend.position = "right")
 ```
-
 :::
 
 **Interpretation:** The two panels together reveal a clear and commercially significant pattern. On claim frequency (left), all three brand tiers show near-identical median values close to zero with overlapping confidence intervals – meaning brand tier does **not** discriminate how often claims occur. The "prestige paradox" hypothesis of luxury drivers claiming less frequently is **not supported**: frequency is statistically indistinguishable across tiers. However, the severity panel (right) tells the opposite story. All three tiers show median severity around €500–650, but the confidence intervals diverge substantially at the upper end. Luxury brands show a notably tighter 95% CI band in the lower range, while the 99% CI extends further upward than the other tiers – confirming that while the *typical* luxury claim costs a similar amount to a mass-market claim, the *extreme* claims from luxury vehicles are disproportionately costly. For an underwriter, the actionable implication is: brand tier loading should be applied **not** to frequency (which is uniform) but as a severity tail loading, particularly for catastrophic claims. The risk of under-reserving luxury vehicle large losses is real and not captured by a combined loss ratio view.
 
----
+------------------------------------------------------------------------
 
 ### 7.2 The "Bad Bonus, Fancy Car" Paradox
 
 **Technique justification:** `ggbarstats()` with brand tier on the y-axis and bonus score as the fill variable. The chi-square test directly tests whether bonus score distribution is independent of brand tier – this is the key statistical question. A plain grouped bar chart would require the reader to visually judge differences and infer significance; `ggbarstats()` embeds the test in the chart and provides an exact p-value, making the analytical conclusion unambiguous.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -1710,18 +1696,17 @@ ggbarstats(
   )
 )
 ```
-
 :::
 
-**Interpretation:** The chi-square test is highly significant (χ² = 281.9, df = 4, p < 0.001), confirming that bonus score distribution differs meaningfully across brand tiers. Examining the actual proportions: Luxury tier carries the highest "Bad" bonus proportion at 2.0%, compared to 1.3% for Budget/Commercial and 1.2% for Upper-mid/Mass-market. While the absolute differences are modest, they are statistically robust given the large sample sizes. More notable is the "Neutral" score proportion: Luxury holds 2.7% Neutral policyholders versus 2.1% for Upper-mid/Mass-market – a 29% relative difference. This means Luxury vehicles are disproportionately held by policyholders with ambiguous or deteriorating claims histories. **The underwriting implication is clear:** Luxury brand tier is a mild but statistically confirmed adverse selection signal. An underwriter should treat brand tier as a supplementary risk indicator – when a Luxury vehicle application combines with a Neutral or Bad bonus score, the combination warrants a premium loading that neither factor alone would trigger. The effect size is small, so standalone brand tier pricing is not warranted, but interaction-term loading (brand tier × bonus score) is actuarially justified.
+**Interpretation:** The chi-square test is highly significant (χ² = 281.9, df = 4, p \< 0.001), confirming that bonus score distribution differs meaningfully across brand tiers. Examining the actual proportions: Luxury tier carries the highest "Bad" bonus proportion at 2.0%, compared to 1.3% for Budget/Commercial and 1.2% for Upper-mid/Mass-market. While the absolute differences are modest, they are statistically robust given the large sample sizes. More notable is the "Neutral" score proportion: Luxury holds 2.7% Neutral policyholders versus 2.1% for Upper-mid/Mass-market – a 29% relative difference. This means Luxury vehicles are held by a somewhat higher proportion of policyholders with Neutral or Bad bonus scores than other brand tiers, a statistically confirmed difference, though modest in absolute magnitude. The chi-square effect size (Cramér's V) is small, indicating the practical difference between tiers is limited. Whether this observed association warrants a separate brand tier loading in a pricing model is a business decision that would require further multivariate analysis. This dataset can identify the association but cannot determine whether brand tier carries independent predictive power once other variables (vehicle value, bonus score) are controlled for.
 
----
+------------------------------------------------------------------------
 
 ### 7.3 Power-to-Weight Ratio as a Latent Thrill-Seeker Index
 
 **Technique justification:** `geom_hex()` + `geom_smooth(method = "gam")` faceted by brand tier. The faceting tests a specific sub-hypothesis: is the power-to-weight signal stronger within the Upper-mid / Mass-market tier (where accessible performance cars concentrate) than within the Luxury tier (where even high-performance vehicles are driven cautiously)? If the GAM slope is steeper in the mass-market panel, this confirms the ratio as a valid additional rating factor for non-luxury segments specifically.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -1787,18 +1772,17 @@ ggplot(
   ) +
   theme(strip.text = element_text(size = 10, face = "bold"))
 ```
-
 :::
 
 **Interpretation:** The three faceted panels reveal that the GAM smoother is effectively flat across all brand tiers – there is no meaningful monotonically increasing relationship between power-to-weight ratio and claim frequency in any tier. The hexbin density confirms that most policies concentrate between power-to-weight ratios of 5–15 kg/hp, with claim frequencies predominantly at zero. The wide confidence bands across all x-values indicate high uncertainty in the smoother, driven by the sparse data at extreme power-to-weight values. **The "thrill-seeker" hypothesis is not supported:** power-to-weight ratio does not discriminate claim frequency after accounting for brand tier in this portfolio. Two explanations are plausible: first, the portfolio is dominated by mainstream vehicles where power-to-weight variation is narrow and claims are driven by other factors; second, genuine high-performance vehicles (low power-to-weight ratios indicating very high power per kg) are too few in this dataset to generate a detectable signal. **For the underwriter, this means power-to-weight ratio should not be introduced as a standalone rating factor** – it would add model complexity without improving risk differentiation. The variable may have value in a multivariate model, but as a univariate predictor it is not credible in this portfolio.
 
----
+------------------------------------------------------------------------
 
 ### 7.4 Which Brands Are Most Expensive to Repair Relative to Declared Value?
 
 **Technique justification:** Ranked `stat_pointinterval()` dotplot, restricted to brands with at least 200 claimant policies. A repair cost intensity index (claim severity / vehicle value) captures the mismatch between what was declared for pricing and what repairs actually cost. The ranked dotplot with CI bars is used in preference to a bar chart because it simultaneously communicates the point estimate and the estimation uncertainty: a bar chart of medians would convey false precision for low-volume brands.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -1898,12 +1882,11 @@ repair_data |>
     y        = "Repair Cost Intensity\n(Severity / Declared Value)"
   )
 ```
-
 :::
 
 **Interpretation:** Brands with high repair cost intensity and narrow confidence intervals (data-rich) represent confirmed pricing blind spots: their premiums are calibrated to low declared values but their actual repair costs are disproportionately high. Older luxury brands that have depreciated significantly in declared value while retaining expensive parts and specialist labour requirements are the typical culprits. Brands whose entire 99% CI sits above 0.5 are systematically generating repair costs that consume more than half of the declared vehicle value per incident – a clear signal for a brand-specific severity surcharge.
 
----
+------------------------------------------------------------------------
 
 ## 8 Bivariate Analysis: Behavioural Drivers
 
@@ -1911,7 +1894,7 @@ repair_data |>
 
 **Technique justification:** `geom_tile()` heatmap of claim breadth (distinct claim types in a year) × bonus score, with policy count annotations. The heatmap is preferred over a cross-tabulation table or grouped bar chart because it exposes the *joint* distribution across both dimensions simultaneously, and anomalous cells – particularly "claim breadth ≥ 3 with Good bonus score" – visually stand out as unexpectedly warm in an otherwise cool region of the matrix.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -1993,18 +1976,17 @@ ggplot(serial_data,
     y        = "Claim Breadth\n(distinct claim types in year)"
   )
 ```
-
 :::
 
 **Interpretation:** Most claimants file under a single coverage line, which is expected. The key anomalous finding would be Good-bonus policyholders accounting for a disproportionate share of breadth-3+ claimants: their complex multi-line claims are inconsistent with a "Good" risk classification. These policyholders either experienced genuinely independent adverse events in one year (unlikely for 3+ distinct lines simultaneously), or represent a segment where the bonus scoring methodology is lagged and fails to capture complex claims behaviour – a data quality issue with direct pricing implications.
 
----
+------------------------------------------------------------------------
 
 ### 8.2 Glass Claims as a "Gateway Drug" to Larger Claims
 
 **Technique justification:** Overlaid `geom_density()` comparing the claim frequency distributions for glass claimers vs non-claimers. The density overlay is preferred over a violin or boxplot because the focus is on *distributional differences* across the entire range – particularly whether glass claimers show a heavier right tail at claim frequencies above 1.0. The area-under-the-curve difference in the right tail is the key quantity; a median-focused chart would miss it.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -2086,18 +2068,17 @@ ggplot(glass_data,
   ) +
   theme(legend.position = "top")
 ```
-
 :::
 
 **Interpretation:** The density chart provides strong visual evidence for the "gateway drug" hypothesis. The non-claimer curve (blue) peaks sharply at zero claim frequency and falls away quickly – the vast majority of non-glass-claimers make no further claims. In stark contrast, the glass-claimer density curve (red) is bimodal: it has its primary mass around 1.0 claims per policy year and a secondary mode near 2.0, with a longer right tail extending beyond 3.0. This means policyholders who filed a glass claim in the same policy year **are concentrated at claim frequencies of 1–2 events**, not at zero. The red curve barely touches zero, confirming that glass claimers overwhelmingly have at least one other claim type in the same period. **This is a definitive confirmation of the gateway signal.** Glass claims do not occur in isolation – they co-occur with broader claims activity. The practical implication for underwriting is substantial: glass claim history should be incorporated into the bonus-malus calculation or used as a supplementary flag at renewal. A policyholder with a glass claim in the prior year should carry a moderate frequency loading on renewal, even if the glass claim itself is excluded from the formal bonus-malus calculation. Failing to do so systematically under-prices the renewal of these policyholders.
 
----
+------------------------------------------------------------------------
 
 ### 8.3 New Business vs Portfolio: Who Is the Worse Risk, and Why?
 
 **Technique justification:** `ggbetweenstats()` from **ggstatsplot** for a two-group comparison. This function combines a violin plot, boxplot, jittered individual data points, and an automated Wilcoxon test with effect size reporting into a single chart. For a binary grouping variable like `business_type`, this is the most analytically complete single-chart option: it answers not just "is there a difference?" but "how large is it and is it statistically significant?" without requiring separate charts.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -2161,12 +2142,11 @@ ggbetweenstats(
   )
 )
 ```
-
 :::
 
 **Interpretation:** The effect size (rank-biserial correlation) reported by `ggbetweenstats` is as important as the p-value here: a statistically significant but negligibly small effect size would suggest the difference, while real, does not warrant a different pricing approach for new business. A large effect size, on the other hand, would confirm that the NB channel absorbs a materially worse risk mix and should carry a structural new business loading in the rating engine – separate from and in addition to any individual risk rating factors.
 
----
+------------------------------------------------------------------------
 
 ## 9 Bivariate Analysis: Loyalty Drivers
 
@@ -2174,7 +2154,7 @@ ggbetweenstats(
 
 **Technique justification:** A two-step approach. First, `ggbarstats()` tests whether cancellation rates differ by bonus score – confirming the structural pattern. Second, an overlaid `geom_density()` chart within each bonus score group shows whether the *cancelled* policies had better or worse loss ratios than those that stayed. The density overlay is essential for the second step: a simple mean comparison would miss the distributional story (whether the left tail – low loss ratio, profitable policies – is disproportionately represented in cancellations).
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -2244,10 +2224,9 @@ ggbarstats(
   )
 )
 ```
-
 :::
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -2319,18 +2298,17 @@ insurance_viz |>
   ) +
   theme(legend.position = "top")
 ```
-
 :::
 
 **Interpretation:** The two charts together confirm the retention paradox with empirical precision. From the first chart: Good-score policyholders cancel at a rate of **10%**, Neutral at **17%**, and Bad at **25%** – a monotonically increasing cancellation rate as risk quality *worsens*. At first glance this seems reassuring (riskier customers leave more). But the second chart reframes this entirely. Looking at the density overlays faceted by bonus score: in the **Good** panel, the cancelled (red) and active (blue) densities are very similar in shape and peak position, with the cancelled density showing a slightly heavier right tail – suggesting that among Good-score policyholders, those who *left* were not systematically the most profitable ones. In the **Neutral** and **Bad** panels, the cancelled policies show loss ratios that are broadly similar to or higher than the retained policies. **The combined picture tells a nuanced story:** the insurer is not clearly losing its best Good-score risks (the retention paradox is partial, not full), but it is also not successfully shedding its worst Bad-score risks at meaningful rates – 75% of Bad-score policyholders *stay*. The highest-risk cohort is the stickiest, likely because they struggle to obtain competitive quotes elsewhere. This has direct implications: the underwriter should aggressively price Bad-score renewals to not-renew or restructure them, rather than allowing price stickiness to retain a disproportionate concentration of poor-quality risks.
 
----
+------------------------------------------------------------------------
 
 ### 9.2 Exposure Duration as a Hidden Quality Signal
 
 **Technique justification:** `stat_density_ridges()` from **ggridges** with quantile shading, plotting loss ratio distributions across four exposure duration bands. The ridgeline format is chosen because comparing four distributional profiles simultaneously in a compact vertical layout is its primary use case. A boxplot of four groups would work, but would suppress the potentially bimodal or heavy-tailed shape within the short-duration bands that is key to the hypothesis.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -2444,12 +2422,11 @@ ggplot(exposure_data,
     legend.position = "right"
   )
 ```
-
 :::
 
-**Interpretation:** The ridgeline chart reveals a striking and unambiguous pattern. The **Full (>0.95yr)** band shows the most compact loss ratio distribution, concentrated just below the break-even line of 1.0, with the narrowest spread – these are the portfolio's most stable, predictable policies. As exposure duration decreases, the distributions progressively widen and shift rightward. The **Very short (<0.35yr)** band has the heaviest right tail, extending well beyond 3.0 and with a substantial proportion of policies above the break-even line. Crucially, even the **median** loss ratio for short-duration policies sits to the right of the full-duration median – confirming that short-duration policies are not just more volatile but systematically less profitable. This is strong actuarial evidence of **claim-then-cancel behaviour**: policyholders who experience a claim in the early months of a policy are disproportionately likely to cancel before the year end, resulting in high incurred costs relative to the partial-year premium collected. **The underwriting prescription is concrete:** comprehensive cover policies should carry an early-termination fee or minimum premium equivalent to at least 50% of the annual premium, and new business policies with very short prior exposure histories (serial switchers) should be flagged for enhanced underwriting review before renewal terms are offered.
+**Interpretation:** The ridgeline chart reveals a striking and unambiguous pattern. The **Full (\>0.95yr)** band shows the most compact loss ratio distribution, concentrated just below the break-even line of 1.0, with the narrowest spread. These are the portfolio's most stable, predictable policies. As exposure duration decreases, the distributions progressively widen and shift rightward. The **Very short (\<0.35yr)** band has the heaviest right tail, extending well beyond 3.0 and with a substantial proportion of policies above the break-even line. Crucially, even the **median** loss ratio for short-duration policies sits to the right of the full-duration median confirming that short-duration policies are not just more volatile but systematically less profitable. The pattern is consistent with short-duration policies carrying a higher loss burden relative to the premium collected. One plausible explanation is that policyholders who experience a claim early may cancel before the policy year ends, producing high incurred costs relative to partial-year premium. However, this dataset does not contain the within-year timing of claims and cancellations, so claim-then-cancel behaviour cannot be directly confirmed from the data. It remains a hypothesis consistent with the observed pattern. What can be stated from the data is that very short duration policies show a systematically worse loss ratio distribution than full-duration policies, and this pattern is visible and consistent across all four exposure bands in the ridgeline chart.
 
----
+------------------------------------------------------------------------
 
 ## 10 Bivariate Analysis: Geographic Drivers
 
@@ -2457,7 +2434,7 @@ ggplot(exposure_data,
 
 **Technique justification:** `stat_pointinterval()` from **ggdist** with simultaneous 95% and 99% confidence intervals. A boxplot or grouped bar chart of summary medians is explicitly avoided because it conveys false precision for the Islands segment, which has a small policy count (as confirmed in Section 4.3). `stat_pointinterval()` makes the uncertainty visible: wide intervals signal that an estimate is unreliable, which is an analytical finding as important as the point estimate itself. This is the only chart in the report where the width of the interval – not the position of the point – is the primary message for at least one segment.
 
-::: {.panel-tabset}
+::: panel-tabset
 ## Plot
 
 ```{r}
@@ -2541,12 +2518,11 @@ ggplot(geo_data,
   ) +
   theme(axis.text.x = element_text(angle = 20, hjust = 1, size = 10))
 ```
-
 :::
 
-**Interpretation:** Urban segments consistently show higher median loss ratios than rural equivalents within each municipality type, confirming circulation area as a genuine geographic risk discriminator. The island segments display substantially wider confidence intervals than inland segments regardless of their median values. This means the insurer does not have enough data to set island pricing with statistical confidence – the appropriate response is either to grow the island book to tighten the interval, or to apply an explicit uncertainty loading over and above any expected value estimate. Raising the island premium to the observed median loss ratio without acknowledging this uncertainty would be actuarially unsound.
+**Interpretation:** Urban segments consistently show higher median loss ratios than rural equivalents within each municipality type, confirming circulation area as a genuine geographic risk discriminator. The island segments display substantially wider confidence intervals than inland segments regardless of their median values. This means the insurer does not have enough data to set island pricing with statistical confidence. The appropriate response is either to grow the island book to tighten the interval, or to apply an explicit uncertainty loading over and above any expected value estimate. Using only the observed median loss ratio for island pricing without accounting for the wide confidence intervals would treat an imprecise estimate as though it were a reliable figure. The confidence interval widths shown in this chart indicate the estimate is not yet statistically stable at these policy volumes.
 
----
+------------------------------------------------------------------------
 
 ## 11 Summary of Key Findings and Underwriting Implications
 
@@ -2554,57 +2530,50 @@ This section distils the most actionable findings from the visual analytics inve
 
 ### 11.1 Portfolio Profitability: Critical Findings
 
-**Finding 1 – COMP_N is the most loss-making and most adversely selected product.**
-Comprehensive cover without excess (COMP_N) carries the highest median loss ratio, the widest distributional spread, and the highest proportion of Bad bonus score policyholders (3.5% vs 1.0%–2.0% for other types). These three risk signals converge on the same conclusion: COMP_N premiums do not adequately reflect the skewed risk intake of this product. *Implication: an immediate actuarial review of COMP_N pricing is warranted, with particular attention to the Bad bonus interaction.*
+**Finding 1 – COMP_N is the most loss-making and most adversely selected product.** Comprehensive cover without excess (COMP_N) carries the highest median loss ratio, the widest distributional spread, and the highest proportion of Bad bonus score policyholders (3.5% vs 1.0%–2.0% for other types). These three risk signals converge on the same conclusion: COMP_N premiums do not adequately reflect the skewed risk intake of this product. *Observed pattern: COMP_N shows the highest median loss ratio, widest distribution, and highest Bad bonus proportion of all product types — all three signals are consistent with this product carrying an elevated risk profile relative to others.*
 
-**Finding 2 – Bonus score is a validated, monotonic predictor of loss experience.**
-Loss ratio increases monotonically and significantly (all pairwise Wilcoxon p < 0.05) from Good → Neutral → Bad. The Bad score segment also carries a heavier right tail, meaning it drives disproportionate large-loss exposure beyond the average. *Implication: bonus score is the single most important individual rating factor in this portfolio and should remain central to all pricing decisions. Bad-score policyholders should receive steeper malus loadings than currently applied if loss ratios in that segment exceed the break-even threshold.*
+**Finding 2 – Bonus score is a validated, monotonic predictor of loss experience.** Loss ratio increases monotonically and significantly (all pairwise Wilcoxon p \< 0.05) from Good → Neutral → Bad. The Bad score segment also carries a heavier right tail, meaning it drives disproportionate large-loss exposure beyond the average. *Observed pattern: of all the variables investigated, bonus score shows the clearest and most statistically consistent association with loss ratio. The monotonic ordering across all three levels is confirmed by the pairwise Wilcoxon tests.*
 
-**Finding 3 – Short-duration policies are structurally unprofitable due to claim-then-cancel behaviour.**
-Very short (<0.35yr) and short (0.35–0.75yr) duration policies show systematically higher median loss ratios and heavier right tails than full-year policies. This is consistent with policyholders filing claims early and cancelling before year-end, collecting indemnity on a partial premium. *Implication: introduce minimum premium floors equivalent to 50% of the annual premium for comprehensive cover; flag repeat short-duration policyholders as elevated risk at new business stage.*
+**Finding 3 – Short-duration policies are structurally unprofitable due to claim-then-cancel behaviour.** Very short (\<0.35yr) and short (0.35–0.75yr) duration policies show systematically higher median loss ratios and heavier right tails than full-year policies. This is consistent with policyholders filing claims early and cancelling before year-end, collecting indemnity on a partial premium. *Observed pattern: very short duration policies consistently show higher median loss ratios and heavier right tails than full-duration policies across all product types examined. The pattern is consistent across the dataset.*
 
-**Finding 4 – New business carries materially worse risk quality than portfolio renewals.**
-NB policyholders carry 1.6% Bad bonus proportion vs 0.8% for portfolio renewals – a 100% relative excess. The Neutral proportion gap (2.6% vs 1.3%) is similarly large. *Implication: a new business loading of 10–15% on comprehensive product tiers is actuarially justified to reflect the pre-renewal adverse selection premium.*
+**Finding 4 – New business carries materially worse risk quality than portfolio renewals.** NB policyholders carry 1.6% Bad bonus proportion vs 0.8% for portfolio renewals – a 100% relative excess. The Neutral proportion gap (2.6% vs 1.3%) is similarly large. *Observed pattern: the chi-square test confirms that new business carries a significantly higher proportion of Bad and Neutral bonus score policyholders than portfolio renewals (p \< 0.001). The magnitude of this difference is visible in the stacked proportion charts.*
 
 ### 11.2 Claims Volatility: Key Drivers
 
-**Finding 5 – Glass claims are a confirmed leading indicator of broader claims activity.**
-Policyholders who file glass claims show bimodal claim frequency distributions centred on 1.0 and 2.0 events per year – not near zero like non-glass-claimers. Glass claims co-occur with other claim types systematically. *Implication: glass claim history must be incorporated into the renewal risk assessment. A 10–15% frequency loading at renewal for prior-year glass claimers is supported by the data. At minimum, glass claim history should flag a policy for enhanced underwriting review before renewal terms are confirmed.*
+**Finding 5 – Glass claims are a confirmed leading indicator of broader claims activity.** Policyholders who file glass claims show bimodal claim frequency distributions centred on 1.0 and 2.0 events per year – not near zero like non-glass-claimers. Glass claims co-occur with other claim types systematically. *Observed pattern: the density overlay chart shows that glass claimers have a bimodal frequency distribution centred at 1.0 and 2.0 events per year, compared to non-claimers who are concentrated near zero. Glass claim history and overall claim frequency are observationally associated in this dataset.*
 
-**Finding 6 – Diesel vehicles incur statistically higher claim severity than gasoline vehicles (p = 0.04).**
-The severity difference is a consistent median shift on the log scale, reflecting higher vehicle values and component costs for diesel models. *Implication: a diesel severity loading of 5–10% over gasoline equivalents is supported, applied to the severity component of the pure premium calculation.*
+**Finding 6 – Diesel vehicles incur statistically higher claim severity than gasoline vehicles (p = 0.04).** The severity difference is a consistent median shift on the log scale, reflecting higher vehicle values and component costs for diesel models. *Observed pattern: the Wilcoxon test confirms a statistically significant difference in median claim severity between diesel and gasoline vehicles (p = 0.04), with diesel showing higher severity. The half-eye shapes indicate this is a consistent median difference rather than a tail-driven effect.*
 
-**Finding 7 – Claim severity is non-linearly related to vehicle age, peaking for new vehicles and again for very old ones.**
-Newer vehicles (0–3 years) have the highest severity due to high replacement values. Very old vehicles show a secondary uptick from rare parts and specialist labour costs. *Implication: the rating schedule for vehicle age should be non-linear, with explicit loadings at both ends of the age spectrum rather than a simple declining factor.*
+**Finding 7 – Claim severity is non-linearly related to vehicle age, peaking for new vehicles and again for very old ones.** Newer vehicles (0–3 years) have the highest severity due to high replacement values. Very old vehicles show a secondary uptick from rare parts and specialist labour costs. *Observed pattern: the GAM smoother on the hexbin chart shows severity is highest for new vehicles (0–3 years), declines through mid-age vehicles, and shows a secondary increase for very old vehicles. The relationship is not monotonically declining.*
 
 ### 11.3 Segmentation and Adverse Selection
 
-**Finding 8 – Luxury brand tier is a confirmed but modest adverse selection signal (χ²=281.9, p < 0.001).**
-Luxury vehicles carry 2.0% Bad bonus proportion vs 1.2%–1.3% for other tiers – statistically significant but modest in absolute terms. More actionably, severity tail risk (extreme claim costs) is higher for Luxury vehicles even though median severity is similar. *Implication: brand tier should not be a standalone rating factor, but the **interaction** of Luxury brand tier × Bad/Neutral bonus score should trigger a combined loading. Severity reserving for Luxury vehicles should use a higher 95th percentile assumption.*
+**Finding 8 – Luxury brand tier is a confirmed but modest adverse selection signal (χ²=281.9, p \< 0.001).** Luxury vehicles carry 2.0% Bad bonus proportion vs 1.2%–1.3% for other tiers – statistically significant but modest in absolute terms. More actionably, severity tail risk (extreme claim costs) is higher for Luxury vehicles even though median severity is similar. *Observed pattern: brand tier shows a statistically significant but small-effect association with bonus score distribution (χ²=281.9, p \< 0.001, small Cramér's V). The severity 99% CI is wider for Luxury than other tiers, suggesting greater variability in extreme claim costs.*
 
-**Finding 9 – Power-to-weight ratio does not predict claim frequency in this portfolio.**
-GAM curves are flat across all brand tiers with near-zero Spearman ρ values. *Implication: do not introduce power-to-weight as a rating variable – it would add model complexity without improving risk differentiation.*
+**Finding 9 – Power-to-weight ratio does not predict claim frequency in this portfolio.** GAM curves are flat across all brand tiers with near-zero Spearman ρ values. *Observed pattern: GAM smoothers are flat across all brand tiers and Spearman ρ values are near-zero, indicating no detectable association between power-to-weight ratio and claim frequency in this dataset.*
 
-**Finding 10 – Bad-score policyholders are the stickiest: 75% remain active vs 90% of Good-score policies.**
-This means the insurer's natural attrition process does not effectively shed its worst risks. The portfolio is accumulating a growing concentration of Bad-score policyholders who cannot get competitive alternatives elsewhere. *Implication: actively not-renew or price-to-exit Bad-score COMP_N policies rather than passively retaining them. A combined Bad-bonus × COMP_N cell with loss ratios consistently above 1.0 should trigger a formal underwriting strategy review.*
+**Finding 10 – Bad-score policyholders are the stickiest: 75% remain active vs 90% of Good-score policies.** This means the insurer's natural attrition process does not effectively shed its worst risks. The portfolio is accumulating a growing concentration of Bad-score policyholders who cannot get competitive alternatives elsewhere. *Observed pattern: Bad-score policyholders have a 25% cancellation rate versus 10% for Good-score policyholders. Despite the higher cancellation rate, 75% of Bad-score policyholders remain active — the largest absolute retention of any bonus group.*
 
 ### 11.4 Geographic Risk
 
-**Finding 11 – Urban policies have higher loss ratios than rural across all municipality types; island estimates are highly uncertain.**
-Urban-rural differences are consistent and directionally clear. Island segment confidence intervals are so wide that the observed median loss ratio cannot be relied upon as a pricing basis without a significant uncertainty loading. *Implication: urban loading factors are justified and should be reviewed annually. For islands, pricing should add an explicit uncertainty buffer (e.g. 95th percentile of the CI rather than the median) until the island portfolio grows to a statistically credible volume.*
+**Finding 11 – Urban policies have higher loss ratios than rural across all municipality types; island estimates are highly uncertain.** Urban-rural differences are consistent and directionally clear. Island segment confidence intervals are so wide that the observed median loss ratio cannot be relied upon as a pricing basis without a significant uncertainty loading. *Observed pattern: urban segments show consistently higher median loss ratios than rural segments across all municipality types. Island segments show substantially wider confidence intervals than inland segments, reflecting smaller policy volumes and less stable estimates.*
 
----
-
-
+------------------------------------------------------------------------
 
 -   [R for Visual Analytics](https://r4va.netlify.app/)
 -   [R for Data Science (2nd ed.)](https://r4ds.hadley.nz/)
--   [Fundamentals of Data Visualisation – Claus O. Wilke](https://clauswilke.com/dataviz/)
 -   [ggplot2 Extensions Gallery](https://exts.ggplot2.tidyverse.org/gallery/)
 -   [ggridges documentation](https://wilkelab.org/ggridges/)
 -   [ggdist: Visualizations of Distributions and Uncertainty](https://mjskay.github.io/ggdist/)
 -   [ggstatsplot: ggplot2-Based Plots with Statistical Details](https://indrajeetpatil.github.io/ggstatsplot/)
--   Swiss Re Institute. (2019). *Advanced analytics: unlocking new frontiers in P&C insurance*. sigma No. 4/2019.
+-   Wilke, C. O. (2019). *Fundamentals of Data Visualisation*. O'Reilly Media. <https://clauswilke.com/dataviz/>
+-   Klugman, S. A., Panjer, H. H., & Willmot, G. E. (2019). *Loss Models: From Data to Decisions* (5th ed.). John Wiley & Sons.
+-   Frees, E. W. et al. *Loss Data Analytics*, Chapter 3: Modeling Loss Severity. <https://openacttexts.github.io/Loss-Data-Analytics/ChapSeverity.html>
+-   Venegas-Martínez, F. et al. (2014). *A Lognormal Model for Insurance Claims Data*. ResearchGate. <https://www.researchgate.net/publication/252507857>
+-   Meng, S., Gao, Y., & Huang, Y. (2022). Actuarial intelligence in auto insurance: Claim frequency modeling with driving behavior features and improved boosted trees. *Insurance: Mathematics and Economics*, 106, 115–127. <https://doi.org/10.1016/j.insmatheco.2022.06.001>
+-   Angelo, M. (2024). Analysis of Claim Frequency and Severity in Auto Insurance Using Generalized Linear Models in Philippines. *Journal of Statistics and Actuarial Research*, 8(3), 34–46. <https://doi.org/10.47604/jsar.2900>
+-   Association of British Insurers. (2009). *ABI Research Paper No. 12: Insurance and Age-Based Differentiation*. London: ABI. <https://media.crai.com/sites/default/files/publications/insurance-and-age-based-differentiation.pdf>
+-   Cappelletti, D. (2023). Older Drivers: Road Safety and Automobile Insurance. *SOA General Insurance Insights*, June 2023. <https://www.soa.org/publications/gi-insights/2023/06/gii-2023-06-cappelletti-2/>
 -   Mendeley Data. Motor Vehicle Insurance Portfolio Dataset. <https://data.mendeley.com/datasets/sw4jmdb2sm/1>
 
-**~~~ End of Take-home Exercise 01 ~~~**
+**\~\~\~ End of Take-home Exercise 01 \~\~\~**

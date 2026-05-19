@@ -155,7 +155,7 @@ Ang Ming Kwan
 <div style="font-size:0.90em; line-height:1.35;">
 <p>A visual analytics investigation of <strong>354,140 motor insurance policies</strong> from a Spanish non-life insurer (2022–2024) identifies structural profitability risks across product, demographic, behavioural, and geographic dimensions.</p>
 <p><strong>Four critical findings demand underwriting attention:</strong></p>
-<p>🔴 <strong>COMP_N</strong> (Comprehensive, No Excess): most loss-making product; 3.5% Bad-bonus policyholders confirms adverse selection; immediate actuarial review required</p>
+<p>🔴 <strong>COMP_N</strong> (Comprehensive, No Excess): highest median loss ratio and widest distribution of all product types; 3.5% Bad-bonus policyholders — the highest of any product type</p>
 <p>🔴 <strong>Bonus score</strong>: statistically validated predictor; loss ratio increases monotonically Good→Bad (all Wilcoxon p &lt; 0.05); Bad-score policyholders drive disproportionate large-loss tail exposure</p>
 <p>🟠 <strong>Short-duration policies</strong>: systematically higher loss ratios confirm claim-then-cancel behaviour; structural premium inadequacy</p>
 <p>🟠 <strong>Glass claims are gateway events</strong>: bimodal frequency at 1–2 events/year confirms co-occurrence with broader claims; validates glass history as a renewal risk flag</p>
@@ -184,7 +184,7 @@ Ang Ming Kwan
 <p><strong>Quality checks:</strong> Zero duplicates. Four variables with missing values: handled <strong>per-analysis</strong> (not global imputation), keeping each decision transparent.</p>
 <p><strong>Categorical recoding:</strong> Raw codes (e.g.&nbsp;<code>"G"</code>, <code>"NB"</code>, <code>"U"</code>) replaced with labels. <code>bonus_score</code> converted to ordered factor: enabling correct ordering in Wilcoxon tests and ridgeline plots.</p>
 <p><strong>Outlier capping:</strong> 99th percentile cap on loss ratio and severity <em>for visualisation only</em>: all statistical tests use uncapped values.</p>
-<p><strong>Binning:</strong> Driver/vehicle age binned into actuarial bands. Vehicle brands classified into three tiers. <code>claim_breadth</code> (number of distinct claim lines per policy) derived as a behavioural signal variable.</p>
+<p><strong>Binning:</strong> Driver/vehicle age binned into analytically meaningful bands used in motor insurance research (Meng et al., 2022; ABI, 2009). Vehicle brands classified into three tiers. <code>claim_breadth</code> (number of distinct claim lines per policy) derived as a behavioural signal variable.</p>
 </div>
 <div style="font-size:0.90em; margin-top:5px; padding:5px 10px; background:#eaf3fb; border-left:3px solid #2980b9; border-radius:3px;">
 <p><strong>Principle:</strong> Every wrangling decision is documented at the point of use and not globally applied. This is to make the audit trail always traceable.</p>
@@ -317,7 +317,7 @@ Ang Ming Kwan
 <td style="text-align: left;">4.6</td>
 <td style="text-align: left;">Distribution of driver age</td>
 <td style="text-align: left;">Histogram + density + reference lines</td>
-<td style="text-align: left;">Reference lines at 25 and 65 make actuarial risk thresholds immediately visible</td>
+<td style="text-align: left;">Reference lines at 25 and 65 mark age boundaries reported as relevant in prior driver risk research (Meng et al., 2022; Cappelletti, 2023; ABI, 2009)</td>
 </tr>
 </tbody>
 </table>
@@ -521,13 +521,11 @@ Ang Ming Kwan
 </div>
 </div>
 </div><div class="column" style="width:44%;">
-<div style="font-size:0.90em; line-height:1.35;">
-<p><strong>Portfolio is concentrated in the 35–60 band</strong>.</p>
-<ul>
-<li><strong>Under-25 drivers</strong> are markedly under-represented.</li>
-<li><strong>Over-65 drivers</strong> taper naturally with licence cessation.</li>
-</ul>
-<p><strong>Statistical implication:</strong> The U-shaped age–risk relationship (young and old drivers claiming more) is well established. However, because both risk extremes are <em>thinly populated</em> here, the age signal is statistically diluted; explaining why the Spearman ρ between driver age and claim frequency is near-zero (−0.035) in Slide 12. This is a portfolio composition effect, not evidence that age is irrelevant to risk.</p>
+<div style="font-size:0.80em; line-height:1.35;">
+<p>The portfolio peaks between <strong>38-42 years</strong> with a median of <strong>48</strong>, and is concentrated in the <strong>30-60 band</strong>. The distribution is moderately right-skewed, rising steeply from age 20 and tapering gradually through the 70s.</p>
+<p><strong>Young risk zone (under 25):</strong> Histogram bars are sparse and short, confirming this group is a minor fraction of total policies. Prior research associates this segment with elevated claim rates due to limited experience and higher risk-taking behaviour (Meng et al., 2022; ABI, 2009).</p>
+<p><strong>Senior risk zone (over 65):</strong> Unlike the sharp drop on the left, the right tail declines gradually. Bars at 65–75 remain visible before tapering toward 90. Prior research links increased crash risk beyond 65 to declining physical capacity (Cappelletti, 2023).</p>
+<p><strong>Statistical implication:</strong> Despite these distributional differences at the extremes, the near-zero Spearman ρ (−0.035) reflects a portfolio composition effect. The dominant 30–60 band arithmetically dilutes the age signal in aggregate correlation measures, though it remains visible in the ridgeline distributions of Slide 12.</p>
 </div>
 </div></div>
 </section>
@@ -578,7 +576,7 @@ Ang Ming Kwan
 <tr class="even">
 <td style="text-align: left;"><strong>Driver age</strong></td>
 <td style="text-align: left;">35–60 dominated; thin extremes</td>
-<td style="text-align: left;">U-shape diluted; signal at extremes</td>
+<td style="text-align: left;">Age distribution limits detectability of risk differences at extremes</td>
 </tr>
 </tbody>
 </table>
@@ -651,7 +649,7 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Interpretation:</strong> Diesel vehicles show <strong>statistically higher severity</strong> (Wilcoxon p = 0.04) - a consistent median <em>location shift</em>, not a tail effect, supporting a 5–10% diesel severity loading. Vehicle age shows a <strong>non-linear U-shape</strong>: severity peaks for new vehicles (high replacement value), declines through mid-years, then rises again for very old vehicles (rare parts, specialist labour). A simple declining age factor in the rating engine is therefore incorrect.</p>
+<p><strong>Interpretation:</strong> Diesel vehicles show <strong>statistically higher severity</strong> (Wilcoxon p = 0.04) - a consistent median <em>location shift</em>, not a tail effect. The half-eye shapes are similar in form across the two fuel types, confirming the difference is in location rather than spread. Vehicle age shows a <strong>non-linear U-shape</strong>: severity peaks for new vehicles (high replacement value), declines through mid-years, then rises again for very old vehicles (rare parts, specialist labour). A simple declining age factor in the rating engine is therefore incorrect.</p>
 </div>
 </section>
 <section id="slide-12-bivariate-demographic-drivers" class="slide level2">
@@ -764,7 +762,7 @@ Ang Ming Kwan
 <p>📊 Enrich with geospatial data to model risk at postcode level</p>
 <p>📊 Link multi-year records to confirm glass claim predictive value in Year 2</p>
 <p>⚙️ Validate all findings with claims and pricing teams before rating engine changes</p>
-<p>⚙️ Commission actuarial review of COMP_N pricing adequacy as an <strong>immediate priority</strong></p>
+<p>⚙️ Investigate COMP_N pricing adequacy — it shows the highest loss ratio, widest variance, and highest Bad bonus concentration of all product types</p>
 </div>
 </div></div>
 

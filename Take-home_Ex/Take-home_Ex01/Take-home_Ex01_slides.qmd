@@ -176,7 +176,7 @@ A visual analytics investigation of **354,140 motor insurance policies** from a 
 
 **Four critical findings demand underwriting attention:**
 
-🔴 **COMP_N** (Comprehensive, No Excess): most loss-making product; 3.5% Bad-bonus policyholders confirms adverse selection; immediate actuarial review required
+🔴 **COMP_N** (Comprehensive, No Excess): highest median loss ratio and widest distribution of all product types; 3.5% Bad-bonus policyholders — the highest of any product type
 
 🔴 **Bonus score**: statistically validated predictor; loss ratio increases monotonically Good→Bad (all Wilcoxon p \< 0.05); Bad-score policyholders drive disproportionate large-loss tail exposure
 
@@ -238,7 +238,7 @@ ggplot(kpi_df, aes(x = metric, y = pct, fill = category)) +
 
 **Outlier capping:** 99th percentile cap on loss ratio and severity *for visualisation only*: all statistical tests use uncapped values.
 
-**Binning:** Driver/vehicle age binned into actuarial bands. Vehicle brands classified into three tiers. `claim_breadth` (number of distinct claim lines per policy) derived as a behavioural signal variable.
+**Binning:** Driver/vehicle age binned into analytically meaningful bands used in motor insurance research (Meng et al., 2022; ABI, 2009). Vehicle brands classified into three tiers. `claim_breadth` (number of distinct claim lines per policy) derived as a behavioural signal variable.
 :::
 
 ::: {style="font-size:0.90em; margin-top:5px; padding:5px 10px; background:#eaf3fb; border-left:3px solid #2980b9; border-radius:3px;"}
@@ -340,7 +340,7 @@ knitr::kable(kpi_tbl, format = "html", escape = FALSE,
 | 4.3 | Geographic distribution | Stacked 100% bar + count labels | Proportions **and** absolute volumes both matter; pure proportions hide the Islands segment's thin \~24,000-policy base |
 | 4.4 | Distribution of vehicle age | Histogram + density overlay | Right-skewed integer variable; density curve smooths the empirical shape |
 | 4.5 | Distribution of vehicle value | Histogram + density (log₁₀) | **Mandatory log scale**; two orders of magnitude spread compresses the modal range into invisibility on linear scale |
-| 4.6 | Distribution of driver age | Histogram + density + reference lines | Reference lines at 25 and 65 make actuarial risk thresholds immediately visible |
+| 4.6 | Distribution of driver age | Histogram + density + reference lines | Reference lines at 25 and 65 mark age boundaries reported as relevant in prior driver risk research (Meng et al., 2022; Cappelletti, 2023; ABI, 2009) |
 :::
 
 ::: {style="font-size:0.70em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
@@ -547,13 +547,14 @@ ggplot(insurance_viz, aes(x = driver_age)) +
 :::
 
 :::: {.column width="44%"}
-::: {style="font-size:0.90em; line-height:1.35;"}
-**Portfolio is concentrated in the 35–60 band**.
+::: {style="font-size:0.80em; line-height:1.35;"}
+The portfolio peaks between **38-42 years** with a median of **48**, and is concentrated in the **30-60 band**. The distribution is moderately right-skewed, rising steeply from age 20 and tapering gradually through the 70s.
 
--   **Under-25 drivers** are markedly under-represented.
--   **Over-65 drivers** taper naturally with licence cessation.
+**Young risk zone (under 25):** Histogram bars are sparse and short, confirming this group is a minor fraction of total policies. Prior research associates this segment with elevated claim rates due to limited experience and higher risk-taking behaviour (Meng et al., 2022; ABI, 2009).
 
-**Statistical implication:** The U-shaped age–risk relationship (young and old drivers claiming more) is well established. However, because both risk extremes are *thinly populated* here, the age signal is statistically diluted; explaining why the Spearman ρ between driver age and claim frequency is near-zero (−0.035) in Slide 12. This is a portfolio composition effect, not evidence that age is irrelevant to risk.
+**Senior risk zone (over 65):** Unlike the sharp drop on the left, the right tail declines gradually. Bars at 65–75 remain visible before tapering toward 90. Prior research links increased crash risk beyond 65 to declining physical capacity (Cappelletti, 2023).
+
+**Statistical implication:** Despite these distributional differences at the extremes, the near-zero Spearman ρ (−0.035) reflects a portfolio composition effect. The dominant 30–60 band arithmetically dilutes the age signal in aggregate correlation measures, though it remains visible in the ridgeline distributions of Slide 12.
 :::
 ::::
 ::::::
@@ -572,7 +573,7 @@ ggplot(insurance_viz, aes(x = driver_age)) +
 | **Municipality** | Islands: n ≈ 24,000 only | Estimates unreliable; need uncertainty buffer |
 | **Vehicle age** | Mode 20–25 yrs; right-skewed | Non-linear severity at both extremes |
 | **Vehicle value** | Log-normal; median €24,700 | Log-scale severity loadings required |
-| **Driver age** | 35–60 dominated; thin extremes | U-shape diluted; signal at extremes |
+| **Driver age** | 35–60 dominated; thin extremes | Age distribution limits detectability of risk differences at extremes |
 :::
 
 ::: {style="font-size:0.90em; margin-top:6px; padding:5px 10px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
@@ -729,7 +730,7 @@ ggplot(
 :::::
 
 ::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
-**Interpretation:** Diesel vehicles show **statistically higher severity** (Wilcoxon p = 0.04) - a consistent median *location shift*, not a tail effect, supporting a 5–10% diesel severity loading. Vehicle age shows a **non-linear U-shape**: severity peaks for new vehicles (high replacement value), declines through mid-years, then rises again for very old vehicles (rare parts, specialist labour). A simple declining age factor in the rating engine is therefore incorrect.
+**Interpretation:** Diesel vehicles show **statistically higher severity** (Wilcoxon p = 0.04) - a consistent median *location shift*, not a tail effect. The half-eye shapes are similar in form across the two fuel types, confirming the difference is in location rather than spread. Vehicle age shows a **non-linear U-shape**: severity peaks for new vehicles (high replacement value), declines through mid-years, then rises again for very old vehicles (rare parts, specialist labour). A simple declining age factor in the rating engine is therefore incorrect.
 :::
 
 ------------------------------------------------------------------------
@@ -981,7 +982,7 @@ A data analyst **surfaces patterns and quantifies associations; they do not make
 
 ⚙️ Validate all findings with claims and pricing teams before rating engine changes
 
-⚙️ Commission actuarial review of COMP_N pricing adequacy as an **immediate priority**
+⚙️ Investigate COMP_N pricing adequacy — it shows the highest loss ratio, widest variance, and highest Bad bonus concentration of all product types
 :::
 ::::
 :::::::
