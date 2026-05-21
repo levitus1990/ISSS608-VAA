@@ -176,17 +176,17 @@ A visual analytics investigation of **354,140 motor insurance policies** from a 
 
 **Four critical findings demand underwriting attention:**
 
-🔴 **COMP_N** (Comprehensive, No Excess): highest median loss ratio and widest distribution of all product types; 3.5% Bad-bonus policyholders — the highest of any product type
+🔴 **COMP_N** (Comprehensive, No Excess):carries the most adverse risk profile of all product types.
 
-🔴 **Bonus score**: statistically validated predictor; loss ratio increases monotonically Good→Bad (all Wilcoxon p \< 0.05); Bad-score policyholders drive disproportionate large-loss tail exposure
+🔴 **Bonus score**: stickiest policy holders with 75% remaining active.
 
-🟠 **Short-duration policies**: systematically higher loss ratios confirm claim-then-cancel behaviour; structural premium inadequacy
+🟠 **Short-duration policies**: systematically higher loss ratios suggesting claim-then-cancel behaviour; structural premium inadequacy
 
 🟠 **Glass claims are gateway events**: bimodal frequency at 1–2 events/year confirms co-occurrence with broader claims; validates glass history as a renewal risk flag
 :::
 
 ::: {style="font-size:0.90em; margin-top:4px; padding:5px 10px; background:#fef9e7; border-left:3px solid #e67e22; border-radius:3px;"}
-Also: New Businesses carries 2× adverse risk vs portfolio renewals +++ Bad-score policyholders: 75% retention +++ Urban \> Rural loss ratios +++ Island pricing statistically unreliable
+Also: New Businesses carries higher adverse risk vs portfolio renewals +++ Urban \> Rural loss ratios +++ Island pricing statistically unreliable
 :::
 :::::
 
@@ -287,10 +287,8 @@ ggplot(missing_df, aes(x = variable, y = missing, fill = high)) +
 
 **Exposure-adjustment is non-negotiable:** A 3-month policy and a 12-month policy generate the same raw claim count for zero incidents. `total_exposure` (policy years) normalises all KPIs. Without it, short-duration segments appear artificially safer.
 
-**Demographic variables tested:** `years_licensed` and `licence_age` were derived to test whether driving experience predicts risk better than age.
-
 ::: {style="padding:5px 10px; background:#fdf2f8; border-left:3px solid #c0392b; border-radius:3px;"}
-⚠️ **Data quality finding:** Both variables showed near-zero Spearman ρ with claim frequency because `age_driving_licence` records the *calendar year* of licence issue, and not years of experience. `years_licensed` is invalid as derived and requires re-specification before use in any model.
+⚠️ **Data quality finding:** It was noted that `age_driving_licence` was mentioned that it is the "Year in which the insured obtained the driving licence", but the dataset only provides 2 digits instead of 4 for this field, suggesting that there are errors in this column. As such, we will ignore this variable for our analyses.
 :::
 ::::
 :::::
@@ -360,7 +358,6 @@ knitr::kable(kpi_tbl, format = "html", escape = FALSE,
 | Conventional | Severity by vehicle age | `geom_hex` + GAM | Hexbin resolves 354K-row overplotting; GAM captures non-linearity |
 | Demographic | Loss ratio by age bands | Ridgelines + quartile shading | 6-group distributional shape comparison, not just medians |
 | Demographic | Driver age × vehicle age | Heatmap (6×6) | Only compact format for 36-cell interaction matrix |
-| Demographic | Driver age vs years licensed | Dual GAM + Spearman ρ | Side-by-side comparison of two candidate risk predictors |
 | Brand/Status | Brand tier: frequency vs severity | Side-by-side `stat_pointinterval` | Decomposes dimensions conflated in a single loss ratio |
 | Brand/Status | Bonus score by brand tier | `ggbarstats()` + χ² | Tests whether risk profile differs by brand tier |
 | Brand/Status | Power-to-weight vs freq | `geom_hex` + GAM (faceted) | Tests performance-proxy signal across tiers |
@@ -671,8 +668,8 @@ ggplot(
 :::
 :::::
 
-::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
-**Interpretation:** COMP_N has the **highest median loss ratio and widest violin**- simultaneously the least profitable and most volatile product. Violin width reveals substantial mass above break-even, not just outliers (Kruskal-Wallis p \< 0.05). Loss ratio increases **monotonically Good→Bad** with all pairwise tests significant. Bad-score half-eye shows a heavier right tail- bad policyholders drive disproportionate *large-loss* exposure, which is what drives capital requirements, not the mean.
+::: {style="font-size:0.75em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
+**Interpretation:** **COMP_N carries the most adverse risk profile of all product types.**- carries the highest proportion of Bad bonus score policyholders (3.5% vs 1.0%–2.0% for other types) and its median loss ratio sits just above break-even. The combination of adverse selection in its risk intake and a median position above LR = 1 makes it the product type with the most concerning risk-profitability combination. Bonus scores show counterintuitive, statistically significant differences in loss ratios. "Good" policyholders exhibit the highest median loss ratio (~2.0) and widest spread. Further investigation is needed to check classification functionality or if "Good" policies hold higher absolute values.
 :::
 
 ------------------------------------------------------------------------
@@ -729,8 +726,8 @@ ggplot(
 :::
 :::::
 
-::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
-**Interpretation:** Diesel vehicles show **statistically higher severity** (Wilcoxon p = 0.04) - a consistent median *location shift*, not a tail effect. The half-eye shapes are similar in form across the two fuel types, confirming the difference is in location rather than spread. Vehicle age shows a **non-linear U-shape**: severity peaks for new vehicles (high replacement value), declines through mid-years, then rises again for very old vehicles (rare parts, specialist labour). A simple declining age factor in the rating engine is therefore incorrect.
+::: {style="font-size:0.8em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
+**Interpretation:** Gasoline vehicles **show marginally higher median claim severity** than diesel vehicles (Wilcoxon p = 0.04). Both fuel types share similar distribution shapes, indicating a minor location shift rather than a difference in extreme tail events. Vehicle age **shows no clear systematic relationship with claim severity**. The GAM smoother remains largely flat across 0–50 years, lacking the expected U-shaped pattern. A marginal uptick for vehicles aged 50+ carries high uncertainty due to sparse data.
 :::
 
 ------------------------------------------------------------------------
@@ -871,7 +868,7 @@ ggplot(glass_data,
 :::::
 
 ::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
-**Interpretation:** Brand tier does **not** discriminate claim frequency (all tiers identical), but Luxury's 99% CI extends further upward for severity, confirming disproportionately costly extreme claims. Apply brand tier as a **severity tail loading**, not a frequency loading. Glass claimers show a **bimodal distribution peaking at 1.0 and 2.0 events/year**, they almost never appear at zero frequency. Glass claims are confirmed gateway events that co-occur with broader claims activity; a 10–15% frequency loading at renewal for prior-year glass claimers is supported.
+**Interpretation:** **Luxury vehicles** exhibit a statistically confirmed but **small adverse selection signal** ($p < 0.001$), with a **higher "Bad" bonus proportion** (2.0% vs. ~1.2%) and **greater extreme claim cost variability**. Multivariate analysis is required to isolate independent predictive power.Glass Claims: **Glass claimers** show a bimodal annual claim frequency centered at 1.0 and 2.0 events, **overwhelmingly co-occurring with other claim types** rather than existing as isolated incidents.
 :::
 
 ------------------------------------------------------------------------
@@ -936,7 +933,7 @@ ggplot(geo_ci, aes(x = geo_seg, y = loss_ratio_capped)) +
 :::::
 
 ::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
-**Interpretation:** **Bad-score policyholders cancel at 25% but 75% stay**; the stickiest cohort, likely lacking competitive alternatives. The insurer's attrition process fails to shed its worst risks; actively pricing Bad-score COMP_N to not-renew is more effective than passive stickiness. **Urban segments show consistently higher loss ratios than rural**. Island segments have dramatically wide CIs; the observed median loss ratio is statistically unreliable; pricing should apply an explicit uncertainty buffer at the 95th percentile of the CI, not the point estimate.
+**Interpretation:** **Bad-score policyholders are the stickiest cohort**. While they cancel more (25% vs. 10% for Good), **75% remain active**, representing the largest absolute risk retention because they likely lack external options. **Urban policies consistently generate higher median loss ratios** than rural ones. Meanwhile, island segments show wide confidence intervals due to low policy volumes; using their observed medians for pricing without accounting for this statistical unreliability introduces significant risk.
 :::
 
 ------------------------------------------------------------------------
@@ -970,7 +967,7 @@ A data analyst **surfaces patterns and quantifies associations; they do not make
 
 🔬 Re-derive `years_licensed` as genuine experience years and retest as risk predictor
 
-🔬 Investigate interaction terms (COMP_N × Bad bonus; Luxury × Neutral) via multivariate GLM
+🔬 Investigate counterintuitive results for higher loss ratios for 'Good' bonus score drivers
 
 🔬 Temporal loss ratio trend analysis across 2022–2024 to detect deteriorating segments
 
@@ -982,7 +979,7 @@ A data analyst **surfaces patterns and quantifies associations; they do not make
 
 ⚙️ Validate all findings with claims and pricing teams before rating engine changes
 
-⚙️ Investigate COMP_N pricing adequacy — it shows the highest loss ratio, widest variance, and highest Bad bonus concentration of all product types
+⚙️ Investigate third_party policy pricing adequacy — it shows the highest loss ratio.
 :::
 ::::
 :::::::

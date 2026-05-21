@@ -155,13 +155,13 @@ Ang Ming Kwan
 <div style="font-size:0.90em; line-height:1.35;">
 <p>A visual analytics investigation of <strong>354,140 motor insurance policies</strong> from a Spanish non-life insurer (2022–2024) identifies structural profitability risks across product, demographic, behavioural, and geographic dimensions.</p>
 <p><strong>Four critical findings demand underwriting attention:</strong></p>
-<p>🔴 <strong>COMP_N</strong> (Comprehensive, No Excess): highest median loss ratio and widest distribution of all product types; 3.5% Bad-bonus policyholders — the highest of any product type</p>
-<p>🔴 <strong>Bonus score</strong>: statistically validated predictor; loss ratio increases monotonically Good→Bad (all Wilcoxon p &lt; 0.05); Bad-score policyholders drive disproportionate large-loss tail exposure</p>
-<p>🟠 <strong>Short-duration policies</strong>: systematically higher loss ratios confirm claim-then-cancel behaviour; structural premium inadequacy</p>
+<p>🔴 <strong>COMP_N</strong> (Comprehensive, No Excess):carries the most adverse risk profile of all product types.</p>
+<p>🔴 <strong>Bonus score</strong>: stickiest policy holders with 75% remaining active.</p>
+<p>🟠 <strong>Short-duration policies</strong>: systematically higher loss ratios suggesting claim-then-cancel behaviour; structural premium inadequacy</p>
 <p>🟠 <strong>Glass claims are gateway events</strong>: bimodal frequency at 1–2 events/year confirms co-occurrence with broader claims; validates glass history as a renewal risk flag</p>
 </div>
 <div style="font-size:0.90em; margin-top:4px; padding:5px 10px; background:#fef9e7; border-left:3px solid #e67e22; border-radius:3px;">
-<p>Also: New Businesses carries 2× adverse risk vs portfolio renewals +++ Bad-score policyholders: 75% retention +++ Urban &gt; Rural loss ratios +++ Island pricing statistically unreliable</p>
+<p>Also: New Businesses carries higher adverse risk vs portfolio renewals +++ Urban &gt; Rural loss ratios +++ Island pricing statistically unreliable</p>
 </div>
 </div><div class="column" style="width:42%;">
 <div class="cell">
@@ -211,9 +211,8 @@ Ang Ming Kwan
 <div style="font-size:0.90em; line-height:1.35;">
 <p><strong>Why raw data is insufficient:</strong> The dataset has premiums, claims, incurred costs, and exposure but none of the actuarial metrics needed to assess profitability or volatility. Six KPIs were derived as the analytical backbone.</p>
 <p><strong>Exposure-adjustment is non-negotiable:</strong> A 3-month policy and a 12-month policy generate the same raw claim count for zero incidents. <code>total_exposure</code> (policy years) normalises all KPIs. Without it, short-duration segments appear artificially safer.</p>
-<p><strong>Demographic variables tested:</strong> <code>years_licensed</code> and <code>licence_age</code> were derived to test whether driving experience predicts risk better than age.</p>
 <div style="padding:5px 10px; background:#fdf2f8; border-left:3px solid #c0392b; border-radius:3px;">
-<p>⚠️ <strong>Data quality finding:</strong> Both variables showed near-zero Spearman ρ with claim frequency because <code>age_driving_licence</code> records the <em>calendar year</em> of licence issue, and not years of experience. <code>years_licensed</code> is invalid as derived and requires re-specification before use in any model.</p>
+<p>⚠️ <strong>Data quality finding:</strong> It was noted that <code>age_driving_licence</code> was mentioned that it is the “Year in which the insured obtained the driving licence”, but the dataset only provides 2 digits instead of 4 for this field, suggesting that there are errors in this column. As such, we will ignore this variable for our analyses.</p>
 </div>
 </div>
 </div><div class="column" style="width:50%;">
@@ -382,66 +381,60 @@ Ang Ming Kwan
 <td style="text-align: left;">Only compact format for 36-cell interaction matrix</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Demographic</td>
-<td style="text-align: left;">Driver age vs years licensed</td>
-<td style="text-align: left;">Dual GAM + Spearman ρ</td>
-<td style="text-align: left;">Side-by-side comparison of two candidate risk predictors</td>
-</tr>
-<tr class="even">
 <td style="text-align: left;">Brand/Status</td>
 <td style="text-align: left;">Brand tier: frequency vs severity</td>
 <td style="text-align: left;">Side-by-side <code>stat_pointinterval</code></td>
 <td style="text-align: left;">Decomposes dimensions conflated in a single loss ratio</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;">Brand/Status</td>
 <td style="text-align: left;">Bonus score by brand tier</td>
 <td style="text-align: left;"><code>ggbarstats()</code> + χ²</td>
 <td style="text-align: left;">Tests whether risk profile differs by brand tier</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;">Brand/Status</td>
 <td style="text-align: left;">Power-to-weight vs freq</td>
 <td style="text-align: left;"><code>geom_hex</code> + GAM (faceted)</td>
 <td style="text-align: left;">Tests performance-proxy signal across tiers</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;">Brand/Status</td>
 <td style="text-align: left;">Repair cost intensity</td>
 <td style="text-align: left;">Ranked dotplot + CI</td>
 <td style="text-align: left;">CI width communicates estimation confidence</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;">Behavioural</td>
 <td style="text-align: left;">Serial claimer breadth</td>
 <td style="text-align: left;">Heatmap</td>
 <td style="text-align: left;">Exposes anomalous multi-line claimers by bonus score</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;">Behavioural</td>
 <td style="text-align: left;">Glass claims gateway</td>
 <td style="text-align: left;">Overlaid density</td>
 <td style="text-align: left;">Right-tail differences confirm gateway signal</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;">Behavioural</td>
 <td style="text-align: left;">New business vs portfolio</td>
 <td style="text-align: left;"><code>ggbetweenstats</code></td>
 <td style="text-align: left;">Unified violin + significance test + effect size</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;">Loyalty</td>
 <td style="text-align: left;">Cancellation paradox</td>
 <td style="text-align: left;"><code>ggbarstats</code> + density</td>
 <td style="text-align: left;">Two-step: cancellation rate, then loss ratio of leavers</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: left;">Loyalty</td>
 <td style="text-align: left;">Exposure duration</td>
 <td style="text-align: left;">Ridgelines (4 bands)</td>
 <td style="text-align: left;">Shape comparison across short vs full duration</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: left;">Geographic</td>
 <td style="text-align: left;">Loss ratio by geography</td>
 <td style="text-align: left;">Point-interval 95%+99% CI</td>
@@ -620,8 +613,8 @@ Ang Ming Kwan
 </div>
 </div>
 </div></div>
-<div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>Interpretation:</strong> COMP_N has the <strong>highest median loss ratio and widest violin</strong>- simultaneously the least profitable and most volatile product. Violin width reveals substantial mass above break-even, not just outliers (Kruskal-Wallis p &lt; 0.05). Loss ratio increases <strong>monotonically Good→Bad</strong> with all pairwise tests significant. Bad-score half-eye shows a heavier right tail- bad policyholders drive disproportionate <em>large-loss</em> exposure, which is what drives capital requirements, not the mean.</p>
+<div style="font-size:0.75em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Interpretation:</strong> <strong>COMP_N carries the most adverse risk profile of all product types.</strong>- carries the highest proportion of Bad bonus score policyholders (3.5% vs 1.0%–2.0% for other types) and its median loss ratio sits just above break-even. The combination of adverse selection in its risk intake and a median position above LR = 1 makes it the product type with the most concerning risk-profitability combination. Bonus scores show counterintuitive, statistically significant differences in loss ratios. “Good” policyholders exhibit the highest median loss ratio (~2.0) and widest spread. Further investigation is needed to check classification functionality or if “Good” policies hold higher absolute values.</p>
 </div>
 </section>
 <section id="slide-11-bivariate-claim-severity---fuel-type-vehicle-age" class="slide level2">
@@ -648,8 +641,8 @@ Ang Ming Kwan
 </div>
 </div>
 </div></div>
-<div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Interpretation:</strong> Diesel vehicles show <strong>statistically higher severity</strong> (Wilcoxon p = 0.04) - a consistent median <em>location shift</em>, not a tail effect. The half-eye shapes are similar in form across the two fuel types, confirming the difference is in location rather than spread. Vehicle age shows a <strong>non-linear U-shape</strong>: severity peaks for new vehicles (high replacement value), declines through mid-years, then rises again for very old vehicles (rare parts, specialist labour). A simple declining age factor in the rating engine is therefore incorrect.</p>
+<div style="font-size:0.8em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
+<p><strong>Interpretation:</strong> Gasoline vehicles <strong>show marginally higher median claim severity</strong> than diesel vehicles (Wilcoxon p = 0.04). Both fuel types share similar distribution shapes, indicating a minor location shift rather than a difference in extreme tail events. Vehicle age <strong>shows no clear systematic relationship with claim severity</strong>. The GAM smoother remains largely flat across 0–50 years, lacking the expected U-shaped pattern. A marginal uptick for vehicles aged 50+ carries high uncertainty due to sparse data.</p>
 </div>
 </section>
 <section id="slide-12-bivariate-demographic-drivers" class="slide level2">
@@ -705,7 +698,7 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>Interpretation:</strong> Brand tier does <strong>not</strong> discriminate claim frequency (all tiers identical), but Luxury’s 99% CI extends further upward for severity, confirming disproportionately costly extreme claims. Apply brand tier as a <strong>severity tail loading</strong>, not a frequency loading. Glass claimers show a <strong>bimodal distribution peaking at 1.0 and 2.0 events/year</strong>, they almost never appear at zero frequency. Glass claims are confirmed gateway events that co-occur with broader claims activity; a 10–15% frequency loading at renewal for prior-year glass claimers is supported.</p>
+<p><strong>Interpretation:</strong> <strong>Luxury vehicles</strong> exhibit a statistically confirmed but <strong>small adverse selection signal</strong> (<span class="math inline">\(p &lt; 0.001\)</span>), with a <strong>higher “Bad” bonus proportion</strong> (2.0% vs.&nbsp;~1.2%) and <strong>greater extreme claim cost variability</strong>. Multivariate analysis is required to isolate independent predictive power.Glass Claims: <strong>Glass claimers</strong> show a bimodal annual claim frequency centered at 1.0 and 2.0 events, <strong>overwhelmingly co-occurring with other claim types</strong> rather than existing as isolated incidents.</p>
 </div>
 </section>
 <section id="slide-14-bivariate-loyalty-geographic-drivers" class="slide level2">
@@ -733,7 +726,7 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>Interpretation:</strong> <strong>Bad-score policyholders cancel at 25% but 75% stay</strong>; the stickiest cohort, likely lacking competitive alternatives. The insurer’s attrition process fails to shed its worst risks; actively pricing Bad-score COMP_N to not-renew is more effective than passive stickiness. <strong>Urban segments show consistently higher loss ratios than rural</strong>. Island segments have dramatically wide CIs; the observed median loss ratio is statistically unreliable; pricing should apply an explicit uncertainty buffer at the 95th percentile of the CI, not the point estimate.</p>
+<p><strong>Interpretation:</strong> <strong>Bad-score policyholders are the stickiest cohort</strong>. While they cancel more (25% vs.&nbsp;10% for Good), <strong>75% remain active</strong>, representing the largest absolute risk retention because they likely lack external options. <strong>Urban policies consistently generate higher median loss ratios</strong> than rural ones. Meanwhile, island segments show wide confidence intervals due to low policy volumes; using their observed medians for pricing without accounting for this statistical unreliability introduces significant risk.</p>
 </div>
 </section>
 <section id="slide-15-conclusion-reflection" class="slide level2">
@@ -756,13 +749,13 @@ Ang Ming Kwan
 <div style="font-size:0.90em; line-height:1.35;">
 <p><strong>Further work required</strong></p>
 <p>🔬 Re-derive <code>years_licensed</code> as genuine experience years and retest as risk predictor</p>
-<p>🔬 Investigate interaction terms (COMP_N × Bad bonus; Luxury × Neutral) via multivariate GLM</p>
+<p>🔬 Investigate counterintuitive results for higher loss ratios for ‘Good’ bonus score drivers</p>
 <p>🔬 Temporal loss ratio trend analysis across 2022–2024 to detect deteriorating segments</p>
 <p>🔬 Apply credibility weighting to thin-data cells before pricing decisions</p>
 <p>📊 Enrich with geospatial data to model risk at postcode level</p>
 <p>📊 Link multi-year records to confirm glass claim predictive value in Year 2</p>
 <p>⚙️ Validate all findings with claims and pricing teams before rating engine changes</p>
-<p>⚙️ Investigate COMP_N pricing adequacy — it shows the highest loss ratio, widest variance, and highest Bad bonus concentration of all product types</p>
+<p>⚙️ Investigate third_party policy pricing adequacy — it shows the highest loss ratio.</p>
 </div>
 </div></div>
 
