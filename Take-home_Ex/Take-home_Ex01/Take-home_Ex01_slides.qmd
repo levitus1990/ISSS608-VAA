@@ -375,7 +375,7 @@ p_vage + p_vval
 :::::
 
 ::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
-**What this tells the business:** The island segment, while comprising around 24,000 policies, shows much wider uncertainty bands in the loss ratio analysis (Slide 14) than other segments — reflecting greater variability in loss outcomes within that segment. Its observed loss ratio should be treated as a range estimate, not a reliable figure for pricing. Most insured vehicles are 20–25 years old on average, and the typical vehicle is worth approximately €24,700.
+**What this tells the business:** The island segment, comprising around 24,000 policies, shows much wider uncertainty bands in the loss ratio analysis (Slide 11) than other segments, reflecting greater variability in loss outcomes within that segment. Further analyses for pricing in respect of Island drivers might be warranted to account for the higher variability. Most insured vehicles are 20–25 years old on average, and the typical vehicle is worth approximately €24,700.
 :::
 
 ---
@@ -448,7 +448,7 @@ The portfolio peaks between **38-42 years** with a median of **48**, and is conc
 
 
 ::: {style="font-size:0.90em; margin-top:6px; padding:5px 10px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
-**Cross-variable insight:** An older vehicle fleet + middle-aged driver base means demographic extremes are bypassed. Risk concentration is instead occurring in the **product and acquisition channel dimensions** (COMP_N adverse selection, NB vs Portfolio gap).
+**Key business insights from univariate analyses:** An older vehicle fleet + middle-aged driver base means demographic extremes are bypassed. Risk concentration is instead occurring in the **product and acquisition channel dimensions** (COMP_N adverse selection, NB vs Portfolio gap).
 :::
 :::::
 
@@ -572,7 +572,7 @@ ggplot(
 :::::
 
 ::: {style="font-size:0.8em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;"}
-**Interpretation:** Gasoline vehicles **show marginally higher median claim severity** than diesel vehicles (Wilcoxon p = 0.04). Both fuel types share similar distribution shapes, indicating a minor location shift rather than a difference in extreme tail events. Vehicle age **shows no clear systematic relationship with claim severity**. The GAM smoother remains largely flat across 0–50 years, lacking the expected U-shaped pattern. A marginal uptick for vehicles aged 50+ carries high uncertainty due to sparse data.
+**What this tells the business:** Gasoline vehicles **show marginally higher median claim severity** than diesel vehicles (Wilcoxon p = 0.04). Both fuel types share similar distribution shapes, indicating a minor location shift rather than a difference in extreme tail events. Vehicle age **shows no clear systematic relationship with claim severity**. The GAM smoother remains largely flat across 0–50 years, lacking the expected U-shaped pattern. A marginal uptick for vehicles aged 50+ carries high uncertainty due to sparse data.
 :::
 
 ---
@@ -754,31 +754,36 @@ ggplot(cancel_df,
 #| fig-height: 3.7
 #| fig-width: 6.2
 geo_ci <- insurance_viz |>
-  filter(loss_ratio_capped > 0, total_exposure > 0) |>
+  filter(loss_ratio > 0, total_exposure > 0) |>
   mutate(
     geo_seg = paste0(municipality_type, "\n(", circulation_area, ")"),
-    geo_seg = fct_reorder(geo_seg, loss_ratio_capped, median)
+    geo_seg = fct_reorder(geo_seg, loss_ratio, median)
   )
-
-ggplot(geo_ci, aes(x = geo_seg, y = loss_ratio_capped)) +
+ggplot(geo_ci, aes(x = geo_seg, y = loss_ratio)) +
   stat_pointinterval(.width = c(0.95,0.99), point_size = 2.8,
                      aes(colour = factor(after_stat(.width)))) +
   scale_colour_manual(name = "CI",
     values = c("0.95"="#2980b9","0.99"="#e67e22"),
     labels = c("95% CI","99% CI")) +
+  scale_y_log10(
+    breaks = c(0.1, 0.5, 1, 2, 5, 10, 25, 50),
+    labels = c("0.1", "0.5", "1", "2", "5", "10", "25", "50")
+  ) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey40") +
   annotate("text", x=0.65, y=1.08, label="Break-even",
            hjust=0, size=2.8, colour="grey40") +
   labs(title = "Loss Ratio by Geographic Segment",
-       subtitle = "Wide island CIs = pricing uncertainty",
-       x = NULL, y = "Loss Ratio") +
+       subtitle = "Urban > Rural across all types; wide island CIs = unreliable estimates",
+       x = NULL, y = "Loss Ratio (log)") +
   theme(axis.text.x = element_text(angle = 20, hjust = 1, size = 8.5))
 ```
 :::
 :::::
 
-::: {style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
-**Interpretation:** **Bad-score policyholders are the stickiest cohort**. While they cancel more (25% vs. 10% for Good), **75% remain active**, representing the largest absolute risk retention because they likely lack external options. **Urban policies consistently generate higher median loss ratios** than rural ones. Meanwhile, island loss ratios show wide uncertainty bands reflecting high variability in that segment's outcomes — using only the observed median for island pricing without accounting for this uncertainty would treat an imprecise estimate as a reliable figure.
+::: {style="font-size:0.75em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;"}
+**What this tells the business:** **Bad-score policyholders are the stickiest cohort**. While they cancel more (25% vs. 10% for Good), **75% remain active**, representing the largest absolute risk retention because they likely lack external options. 
+
+On geography, median loss ratios are similar across urban and rural segments within each municipality type. This chart alone does not confirm circulation area as a meaningful risk discriminator, and a formal statistical test would be needed before treating it as a rating factor. Island segments present a more pressing concern: their confidence intervals are dramatically wider than mainland segments, meaning the observed median is an unreliable pricing input. The insurer should apply an explicit uncertainty loading for island policies rather than pricing off the median alone.
 :::
 
 ---

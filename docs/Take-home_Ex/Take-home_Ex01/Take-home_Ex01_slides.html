@@ -267,7 +267,7 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>What this tells the business:</strong> The island segment, while comprising around 24,000 policies, shows much wider uncertainty bands in the loss ratio analysis (Slide 14) than other segments — reflecting greater variability in loss outcomes within that segment. Its observed loss ratio should be treated as a range estimate, not a reliable figure for pricing. Most insured vehicles are 20–25 years old on average, and the typical vehicle is worth approximately €24,700.</p>
+<p><strong>What this tells the business:</strong> The island segment, comprising around 24,000 policies, shows much wider uncertainty bands in the loss ratio analysis (Slide 11) than other segments, reflecting greater variability in loss outcomes within that segment. Further analyses for pricing in respect of Island drivers might be warranted to account for the higher variability. Most insured vehicles are 20–25 years old on average, and the typical vehicle is worth approximately €24,700.</p>
 </div>
 </section>
 <section id="slide-5-univariate-driver-age-distribution" class="slide level2">
@@ -345,7 +345,7 @@ Ang Ming Kwan
 </table>
 </div>
 <div style="font-size:0.90em; margin-top:6px; padding:5px 10px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Cross-variable insight:</strong> An older vehicle fleet + middle-aged driver base means demographic extremes are bypassed. Risk concentration is instead occurring in the <strong>product and acquisition channel dimensions</strong> (COMP_N adverse selection, NB vs Portfolio gap).</p>
+<p><strong>Key business insights from univariate analyses:</strong> An older vehicle fleet + middle-aged driver base means demographic extremes are bypassed. Risk concentration is instead occurring in the <strong>product and acquisition channel dimensions</strong> (COMP_N adverse selection, NB vs Portfolio gap).</p>
 </div>
 </div></div>
 </section>
@@ -402,7 +402,7 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.8em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Interpretation:</strong> Gasoline vehicles <strong>show marginally higher median claim severity</strong> than diesel vehicles (Wilcoxon p = 0.04). Both fuel types share similar distribution shapes, indicating a minor location shift rather than a difference in extreme tail events. Vehicle age <strong>shows no clear systematic relationship with claim severity</strong>. The GAM smoother remains largely flat across 0–50 years, lacking the expected U-shaped pattern. A marginal uptick for vehicles aged 50+ carries high uncertainty due to sparse data.</p>
+<p><strong>What this tells the business:</strong> Gasoline vehicles <strong>show marginally higher median claim severity</strong> than diesel vehicles (Wilcoxon p = 0.04). Both fuel types share similar distribution shapes, indicating a minor location shift rather than a difference in extreme tail events. Vehicle age <strong>shows no clear systematic relationship with claim severity</strong>. The GAM smoother remains largely flat across 0–50 years, lacking the expected U-shaped pattern. A marginal uptick for vehicles aged 50+ carries high uncertainty due to sparse data.</p>
 </div>
 </section>
 <section id="slide-9-bivariate-demographic-drivers" class="slide level2">
@@ -485,8 +485,9 @@ Ang Ming Kwan
 </div>
 </div>
 </div></div>
-<div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>Interpretation:</strong> <strong>Bad-score policyholders are the stickiest cohort</strong>. While they cancel more (25% vs.&nbsp;10% for Good), <strong>75% remain active</strong>, representing the largest absolute risk retention because they likely lack external options. <strong>Urban policies consistently generate higher median loss ratios</strong> than rural ones. Meanwhile, island loss ratios show wide uncertainty bands reflecting high variability in that segment’s outcomes — using only the observed median for island pricing without accounting for this uncertainty would treat an imprecise estimate as a reliable figure.</p>
+<div style="font-size:0.75em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>What this tells the business:</strong> <strong>Bad-score policyholders are the stickiest cohort</strong>. While they cancel more (25% vs.&nbsp;10% for Good), <strong>75% remain active</strong>, representing the largest absolute risk retention because they likely lack external options.</p>
+<p>On geography, median loss ratios are similar across urban and rural segments within each municipality type. This chart alone does not confirm circulation area as a meaningful risk discriminator, and a formal statistical test would be needed before treating it as a rating factor. Island segments present a more pressing concern: their confidence intervals are dramatically wider than mainland segments, meaning the observed median is an unreliable pricing input. The insurer should apply an explicit uncertainty loading for island policies rather than pricing off the median alone.</p>
 </div>
 </section>
 <section id="slide-12-conclusion-reflection" class="slide level2">

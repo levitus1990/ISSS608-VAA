@@ -447,7 +447,7 @@ ggbarstats(
 
 ### 4.3 Geographic Distribution by Municipality Type and Circulation Area
 
-**Technique justification:** A grouped `geom_col()` chart with policy count annotations is used rather than a pure stacked proportion bar. Both absolute volume and proportional split are analytically important here: the Islands segment's small policy count is as important a fact as its share of the portfolio, because it directly affects the statistical reliability of any downstream loss ratio estimate for that segment. A proportion-only chart would obscure this volume disparity.
+**Technique justification:** A grouped `geom_col()` chart with policy count annotations is used rather than a pure stacked proportion bar as both absolute volume and proportional split are analytically important here.
 
 ::: panel-tabset
 ## Plot
@@ -551,7 +551,7 @@ ggplot(geo_counts,
 ```
 :::
 
-**Interpretation:** Inland Urban dominates the portfolio by a wide margin. The Islands segment, while comprising approximately 24,000 policies, shows substantially wider confidence intervals in the loss ratio analysis (Section 10) than the inland segments — reflecting greater variability in loss outcomes within this segment rather than insufficient volume per se. Pricing decisions for this segment should treat the observed median loss ratio as an uncertain estimate with a wide range, not a reliable rate basis.
+**Interpretation:** Inland Urban dominates the portfolio by a wide margin. The Islands segment, while comprising approximately 24,000 policies, shows substantially wider confidence intervals in the loss ratio analysis (Section 10) than the inland segments, reflecting greater variability in loss outcomes within this segment rather than insufficient volume per se. Further analyses for pricing in respect of Island drivers might be warranted to account for the higher variability.
 
 ------------------------------------------------------------------------
 
@@ -1121,7 +1121,7 @@ ggplot(
 ```
 :::
 
-## **Interpretation:** Repair costs per claim do not vary materially with vehicle age across most of the fleet. The trend line is broadly flat for vehicles aged 5–50 years — the range covering the majority of policies. There is a marginal increase in repair costs for very old vehicles (50+ years), consistent with specialist parts being harder to source for older models, though this is based on a relatively small number of policies at that age extreme and carries higher uncertainty. For pricing purposes, vehicle age alone does not appear to be a strong predictor of repair cost variation in this portfolio across the bulk of the distribution — other vehicle characteristics such as declared value are likely more important drivers of severity differences.
+**Interpretation:** Repair costs per claim do not vary materially with vehicle age across most of the fleet. The trend line is broadly flat for vehicles aged 5–50 years — the range covering the majority of policies. There is a marginal increase in repair costs for very old vehicles (50+ years), consistent with specialist parts being harder to source for older models, though this is based on a relatively small number of policies at that age extreme and carries higher uncertainty. For pricing purposes, vehicle age alone does not appear to be a strong predictor of repair cost variation in this portfolio across the bulk of the distribution — other vehicle characteristics such as declared value are likely more important drivers of severity differences.
 
 ## 6 Bivariate Analysis: Demographic Drivers
 
@@ -2310,7 +2310,7 @@ ggplot(exposure_data,
 
 ### 10.1 Loss Ratio by Municipality Type and Circulation Area
 
-**Technique justification:** `stat_pointinterval()` from **ggdist** with simultaneous 95% and 99% confidence intervals. A boxplot or grouped bar chart of summary medians is explicitly avoided because it conveys false precision for the Islands segment, which has a small policy count (as confirmed in Section 4.3). `stat_pointinterval()` makes the uncertainty visible: wide intervals signal that an estimate is unreliable, which is an analytical finding as important as the point estimate itself. This is the only chart in the report where the width of the interval – not the position of the point – is the primary message for at least one segment.
+**Technique justification:** `stat_pointinterval()` from **ggdist** with simultaneous 95% and 99% confidence intervals. A boxplot or grouped bar chart of summary medians is explicitly avoided because it conveys false precision for the Islands segment, which has a smaller proportion of total policy count (as confirmed in Section 4.3). `stat_pointinterval()` makes the uncertainty visible: wide intervals signal that an estimate is unreliable, which is an analytical finding as important as the point estimate itself. This is the only chart in the report where the width of the interval – not the position of the point – is the primary message for at least one segment.
 
 ::: panel-tabset
 ## Plot
@@ -2321,16 +2321,14 @@ ggplot(exposure_data,
 #| fig-cap: "Loss ratio by geographic segment. Median + 95%/99% CIs. Wide island confidence intervals are the finding: the island loss ratio estimate is highly uncertain, not just high."
 #| fig-width: 10
 #| fig-height: 5
-
 geo_data <- insurance_viz |>
-  filter(loss_ratio_capped > 0, total_exposure > 0) |>
+  filter(loss_ratio > 0, total_exposure > 0) |>
   mutate(
     geo_segment = paste0(municipality_type, "\n(", circulation_area, ")"),
-    geo_segment = fct_reorder(geo_segment, loss_ratio_capped, median)
+    geo_segment = fct_reorder(geo_segment, loss_ratio, median)
   )
-
 ggplot(geo_data,
-       aes(x = geo_segment, y = loss_ratio_capped)) +
+       aes(x = geo_segment, y = loss_ratio)) +
   stat_pointinterval(
     .width     = c(0.95, 0.99),
     point_size = 3.5,
@@ -2341,6 +2339,10 @@ ggplot(geo_data,
     values = c("0.95" = "#4B8BBE", "0.99" = "#E07B39"),
     labels = c("95% CI", "99% CI")
   ) +
+  scale_y_log10(
+    breaks = c(0.1, 0.5, 1, 2, 5, 10, 25, 50),
+    labels = c("0.1", "0.5", "1", "2", "5", "10", "25", "50")
+  ) +
   geom_hline(yintercept = 1, linetype = "dashed",
              colour = "grey50", linewidth = 0.7) +
   annotate("text", x = 0.6, y = 1.04,
@@ -2348,9 +2350,9 @@ ggplot(geo_data,
            hjust = 0, size = 3, colour = "grey50") +
   labs(
     title    = "Loss Ratio by Geographic Segment",
-    subtitle = "Ordered by median; wide CIs on island segments reflect small sample volumes",
+    subtitle = "Ordered by median; log scale reveals full CI width across all segments",
     x        = "Geographic Segment\n(Municipality × Circulation Area)",
-    y        = "Loss\nRatio"
+    y        = "Loss\nRatio (log)"
   ) +
   theme(axis.text.x = element_text(angle = 20, hjust = 1, size = 10))
 ```
@@ -2363,16 +2365,14 @@ ggplot(geo_data,
 #| fig-cap: "Loss ratio by geographic segment. Median + 95%/99% CIs. Wide island confidence intervals are the finding: the island loss ratio estimate is highly uncertain, not just high."
 #| fig-width: 10
 #| fig-height: 5
-
 geo_data <- insurance_viz |>
-  filter(loss_ratio_capped > 0, total_exposure > 0) |>
+  filter(loss_ratio > 0, total_exposure > 0) |>
   mutate(
     geo_segment = paste0(municipality_type, "\n(", circulation_area, ")"),
-    geo_segment = fct_reorder(geo_segment, loss_ratio_capped, median)
+    geo_segment = fct_reorder(geo_segment, loss_ratio, median)
   )
-
 ggplot(geo_data,
-       aes(x = geo_segment, y = loss_ratio_capped)) +
+       aes(x = geo_segment, y = loss_ratio)) +
   stat_pointinterval(
     .width     = c(0.95, 0.99),
     point_size = 3.5,
@@ -2383,6 +2383,10 @@ ggplot(geo_data,
     values = c("0.95" = "#4B8BBE", "0.99" = "#E07B39"),
     labels = c("95% CI", "99% CI")
   ) +
+  scale_y_log10(
+    breaks = c(0.1, 0.5, 1, 2, 5, 10, 25, 50),
+    labels = c("0.1", "0.5", "1", "2", "5", "10", "25", "50")
+  ) +
   geom_hline(yintercept = 1, linetype = "dashed",
              colour = "grey50", linewidth = 0.7) +
   annotate("text", x = 0.6, y = 1.04,
@@ -2390,15 +2394,16 @@ ggplot(geo_data,
            hjust = 0, size = 3, colour = "grey50") +
   labs(
     title    = "Loss Ratio by Geographic Segment",
-    subtitle = "Ordered by median; wide CIs on island segments reflect small sample volumes",
+    subtitle = "Ordered by median; log scale reveals full CI width across all segments",
     x        = "Geographic Segment\n(Municipality × Circulation Area)",
-    y        = "Loss\nRatio"
+    y        = "Loss\nRatio (log)"
   ) +
   theme(axis.text.x = element_text(angle = 20, hjust = 1, size = 10))
 ```
 :::
 
-**Interpretation:** Urban segments consistently show higher median loss ratios than rural equivalents within each municipality type, confirming circulation area as a genuine geographic risk discriminator. The island segments display substantially wider confidence intervals than inland segments regardless of their median values. This means the insurer does not have enough data to set island pricing with statistical confidence. The appropriate response is either to grow the island book to tighten the interval, or to apply an explicit uncertainty loading over and above any expected value estimate. Using only the observed median loss ratio for island pricing without accounting for the wide confidence intervals would treat an imprecise estimate as though it were a reliable figure. The confidence interval widths shown in this chart reflect high variability in loss outcomes within the island segment — the observed median should be treated as a range estimate rather than a reliable point figure.
+**Interpretation:** All six geographic segments share similar median loss ratios (approximately 2.0–3.0), with no consistent pattern of urban segments outperforming rural equivalents. Circulation area does not emerge as a meaningful risk discriminator from this chart. All segments carry substantial uncertainty, with 99% confidence intervals extending to approximately 50 on the log scale. Island segments show marginally wider intervals than mainland segments, though the difference is modest.
+For the insurer, this meant that loss ratios are highly variable across all geographic segments — no segment can be priced reliably from the median alone. The insurer should avoid treating observed medians as precise pricing inputs and instead apply uncertainty loadings, particularly for lower-volume segments like islands.
 
 ------------------------------------------------------------------------
 
@@ -2434,7 +2439,7 @@ This section distils the most actionable findings from the visual analytics inve
 
 ### 11.4 Geographic Risk
 
-**Finding 11 – Urban policies show higher loss ratios than rural; island segment estimates are statistically unreliable.** Urban segments show consistently higher median loss ratios than rural equivalents within each municipality type. Island segments show dramatically wider confidence intervals than inland segments, reflecting smaller policy volumes. Using only the observed median loss ratio for island pricing without accounting for the wide confidence intervals would treat an imprecise estimate as a reliable figure. Observed pattern: urban segments consistently show higher median loss ratios than rural equivalents across all municipality types. Island segments show substantially wider confidence intervals than inland segments.
+**Finding 11 – Urban policies show higher loss ratios than rural; island segment estimates are statistically unreliable.** All six geographic segments show median loss ratios approximately between 2.0-3.0. Circulation area does not emerge as a meaningful risk discriminator from this chart. The more critical finding is the contrast in confidence interval widths. Island segments show dramatically wider intervals than inland and coastal segments, reflecting smaller policy volumes in those areas. For island segments, the wide confidence intervals mean the observed median cannot be treated as a reliable pricing input: the true loss ratio could be materially higher. The insurer should apply an explicit uncertainty loading for island policies rather than pricing purely off the observed median.
 
 ------------------------------------------------------------------------
 
