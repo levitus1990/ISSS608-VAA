@@ -125,10 +125,6 @@
       margin-right: 0; 
     }
   </style>
-  <script src="../../site_libs/kePrint-0.0.1/kePrint.js"></script>
-
-  <link href="../../site_libs/lightable-0.0.1/lightable.css" rel="stylesheet">
-
 </head>
 <body class="quarto-light">
   <div class="reveal">
@@ -151,329 +147,103 @@ Ang Ming Kwan
 <section id="slide-1-executive-summary" class="slide level2">
 <h2>Slide 1 | Executive Summary</h2>
 <div class="columns">
-<div class="column" style="width:58%;">
-<div style="font-size:0.90em; line-height:1.35;">
-<p>A visual analytics investigation of <strong>354,140 motor insurance policies</strong> from a Spanish non-life insurer (2022–2024) identifies structural profitability risks across product, demographic, behavioural, and geographic dimensions.</p>
-<p><strong>Four critical findings demand underwriting attention:</strong></p>
-<p>🔴 <strong>COMP_N</strong> (Comprehensive, No Excess):carries the most adverse risk profile of all product types.</p>
-<p>🔴 <strong>Bonus score</strong>: stickiest policy holders with 75% remaining active.</p>
-<p>🟠 <strong>Short-duration policies</strong>: systematically higher loss ratios suggesting claim-then-cancel behaviour; structural premium inadequacy</p>
-<p>🟠 <strong>Glass claims are gateway events</strong>: bimodal frequency at 1–2 events/year confirms co-occurrence with broader claims; validates glass history as a renewal risk flag</p>
-</div>
-<div style="font-size:0.90em; margin-top:4px; padding:5px 10px; background:#fef9e7; border-left:3px solid #e67e22; border-radius:3px;">
-<p>Also: New Businesses carries higher adverse risk vs portfolio renewals +++ Urban &gt; Rural loss ratios +++ Island pricing statistically unreliable</p>
-</div>
-</div><div class="column" style="width:42%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/exec-kpi-bar-1.png" width="403"></p>
-</figure>
-</div>
-</div>
-</div>
-</div></div>
-</section>
-<section id="slide-2-data-preparation" class="slide level2">
-<h2>Slide 2 | Data Preparation</h2>
-<div class="columns">
 <div class="column" style="width:55%;">
-<div style="font-size:0.90em; line-height:1.35;">
-<p><strong>Import:</strong> Explicit semicolon delimiter via <code>read_delim()</code>: prevents silent mis-parsing of the 47-column, 354,140-row file.</p>
-<p><strong>Quality checks:</strong> Zero duplicates. Four variables with missing values: handled <strong>per-analysis</strong> (not global imputation), keeping each decision transparent.</p>
-<p><strong>Categorical recoding:</strong> Raw codes (e.g.&nbsp;<code>"G"</code>, <code>"NB"</code>, <code>"U"</code>) replaced with labels. <code>bonus_score</code> converted to ordered factor: enabling correct ordering in Wilcoxon tests and ridgeline plots.</p>
-<p><strong>Outlier capping:</strong> 99th percentile cap on loss ratio and severity <em>for visualisation only</em>: all statistical tests use uncapped values.</p>
-<p><strong>Binning:</strong> Driver/vehicle age binned into analytically meaningful bands used in motor insurance research (Meng et al., 2022; ABI, 2009). Vehicle brands classified into three tiers. <code>claim_breadth</code> (number of distinct claim lines per policy) derived as a behavioural signal variable.</p>
+<div style="font-size:0.82em; line-height:1.3;">
+<p>A visual analytics investigation of <strong>354,140 motor insurance policies</strong> from a Spanish non-life insurer (2022–2024) uncovers structural profitability risks across product, customer, behavioural, and geographic dimensions.</p>
+<p><strong>Four findings stand out for business attention:</strong></p>
+<p>🔴 <strong>Comprehensive cover (no excess)</strong> attracts three times more poor-risk drivers than basic third-party cover — its pricing may not reflect the risk it is absorbing</p>
+<p>🔴 <strong>Poor claims history policyholders are the stickiest</strong> — 75% remain active year after year, making them the hardest-to-shed risk concentration in the portfolio</p>
+<p>🟠 <strong>Short-duration policies consistently generate higher losses</strong> relative to the premium collected — a pattern consistent with claims being filed shortly before policies are cancelled</p>
+<p>🟠 <strong>Policyholders who file glass claims almost always have other claims too</strong> — glass claim history is a reliable early warning signal of broader claims activity</p>
 </div>
-<div style="font-size:0.90em; margin-top:5px; padding:5px 10px; background:#eaf3fb; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Principle:</strong> Every wrangling decision is documented at the point of use and not globally applied. This is to make the audit trail always traceable.</p>
+<div style="font-size:0.82em; margin-top:4px; padding:4px 10px; background:#fef9e7; border-left:3px solid #e67e22; border-radius:3px;">
+<p>Further patterns: newly acquired customers carry twice the adverse risk of renewals · urban policies generate higher losses than rural</p>
 </div>
 </div><div class="column" style="width:45%;">
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide2-missing-1.png" width="422"></p>
+<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/exec-summary-chart-1.png" width="480"></p>
 </figure>
 </div>
 </div>
 </div>
-<div style="font-size:0.90em; margin-top:6px; padding:5px 10px; background:#fef9e7; border-left:3px solid #e67e22; border-radius:3px;">
-<p><code>fuel_type</code> (0.36%) and <code>vehicle_value</code> (0.14%) are the only meaningful gaps. Impact on downstream analyses is minimal; excluded only in analyses that use those variables.</p>
-</div>
 </div></div>
 </section>
-<section id="slide-3-derived-kpis" class="slide level2">
-<h2>Slide 3 | Derived KPIs</h2>
+<section id="slide-2-methodology-data" class="slide level2">
+<h2>Slide 2 | Methodology &amp; Data</h2>
 <div class="columns">
 <div class="column" style="width:50%;">
 <div style="font-size:0.90em; line-height:1.35;">
-<p><strong>Why raw data is insufficient:</strong> The dataset has premiums, claims, incurred costs, and exposure but none of the actuarial metrics needed to assess profitability or volatility. Six KPIs were derived as the analytical backbone.</p>
-<p><strong>Exposure-adjustment is non-negotiable:</strong> A 3-month policy and a 12-month policy generate the same raw claim count for zero incidents. <code>total_exposure</code> (policy years) normalises all KPIs. Without it, short-duration segments appear artificially safer.</p>
-<div style="padding:5px 10px; background:#fdf2f8; border-left:3px solid #c0392b; border-radius:3px;">
-<p>⚠️ <strong>Data quality finding:</strong> It was noted that <code>age_driving_licence</code> was mentioned that it is the “Year in which the insured obtained the driving licence”, but the dataset only provides 2 digits instead of 4 for this field, suggesting that there are errors in this column. As such, we will ignore this variable for our analyses.</p>
-</div>
+<p><strong>Dataset</strong></p>
+<p>354,140 motor insurance policies from a Spanish non-life insurer, 2022–2024. Covers 47 variables on policy type, driver and vehicle characteristics, premiums, and claims.</p>
+<p><strong>How the analysis is structured</strong></p>
+<ul>
+<li><a href="Take-home_Ex01.html#data-wrangling">Data preparation and quality checks →</a></li>
+<li><a href="Take-home_Ex01.html#deriving-analytical-kpis">KPIs derived for this analysis →</a></li>
+<li><a href="Take-home_Ex01.html#univariate-analysis">All univariate analyses →</a></li>
+<li><a href="Take-home_Ex01.html#bivariate-analysis-conventional-drivers">All bivariate analyses →</a></li>
+</ul>
+<p><strong>Key data preparation steps</strong></p>
+<ul>
+<li>Zero duplicates confirmed; four variables had minor missing data (under 0.5% each)</li>
+<li>Missing values handled per-analysis, not globally — keeping decisions transparent</li>
+<li>99th percentile cap applied to loss ratio and severity <strong>for display only</strong> — all analyses use full data</li>
+</ul>
 </div>
 </div><div class="column" style="width:50%;">
-<div class="cell">
-<div class="cell-output-display">
-<table class="table table-striped table-condensed caption-top" style="font-size: 11.5px; margin-left: auto; margin-right: auto;">
+<div style="font-size:0.90em; line-height:1.35;">
+<p><strong>Six profitability metrics were derived</strong></p>
+<table class="caption-top">
 <thead>
 <tr class="header">
-<th style="text-align: left;" data-quarto-table-cell-role="th">KPI</th>
-<th style="text-align: left;" data-quarto-table-cell-role="th">Formula</th>
-<th style="text-align: left;" data-quarto-table-cell-role="th">Interpretation</th>
+<th style="text-align: left;">Metric</th>
+<th style="text-align: left;">What it measures</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left; font-weight: bold; color: rgba(26, 82, 118, 255) !important; background-color: rgba(254, 249, 231, 255) !important;">loss_ratio</td>
-<td style="text-align: left; background-color: rgba(254, 249, 231, 255) !important;">incurred / premium</td>
-<td style="text-align: left; background-color: rgba(254, 249, 231, 255) !important;">LR &gt; 1 = underwriting loss</td>
+<td style="text-align: left;">Loss ratio</td>
+<td style="text-align: left;">Profit/loss per €1 of premium collected</td>
 </tr>
 <tr class="even">
-<td style="text-align: left; font-weight: bold; color: rgba(26, 82, 118, 255) !important; background-color: rgba(254, 249, 231, 255) !important;">claim_frequency</td>
-<td style="text-align: left; background-color: rgba(254, 249, 231, 255) !important;">claims / exposure</td>
-<td style="text-align: left; background-color: rgba(254, 249, 231, 255) !important;">Claims per policy year</td>
+<td style="text-align: left;">Claim frequency</td>
+<td style="text-align: left;">Claims filed per policy year</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left; font-weight: bold; color: rgba(26, 82, 118, 255) !important; background-color: rgba(234, 250, 241, 255) !important;">claim_severity</td>
-<td style="text-align: left; background-color: rgba(234, 250, 241, 255) !important;">incurred / claims</td>
-<td style="text-align: left; background-color: rgba(234, 250, 241, 255) !important;">Avg cost per claim event</td>
+<td style="text-align: left;">Claim severity</td>
+<td style="text-align: left;">Average repair cost per claim</td>
 </tr>
 <tr class="even">
-<td style="text-align: left; font-weight: bold; color: rgba(26, 82, 118, 255) !important; background-color: rgba(234, 250, 241, 255) !important;">pure_premium</td>
-<td style="text-align: left; background-color: rgba(234, 250, 241, 255) !important;">incurred / exposure</td>
-<td style="text-align: left; background-color: rgba(234, 250, 241, 255) !important;">Risk cost per policy year</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left; font-weight: bold; color: rgba(26, 82, 118, 255) !important; background-color: rgba(253, 242, 248, 255) !important;">years_licensed</td>
-<td style="text-align: left; background-color: rgba(253, 242, 248, 255) !important;">year − lic_year</td>
-<td style="text-align: left; background-color: rgba(253, 242, 248, 255) !important;">Experience proxy ⚠️</td>
-</tr>
-<tr class="even">
-<td style="text-align: left; font-weight: bold; color: rgba(26, 82, 118, 255) !important; background-color: rgba(253, 242, 248, 255) !important;">licence_age</td>
-<td style="text-align: left; background-color: rgba(253, 242, 248, 255) !important;">age − years_lic</td>
-<td style="text-align: left; background-color: rgba(253, 242, 248, 255) !important;">Age at first licence</td>
+<td style="text-align: left;">Pure premium</td>
+<td style="text-align: left;">Total risk cost per policy year</td>
 </tr>
 </tbody>
 </table>
+<p>All metrics are <strong>exposure-adjusted</strong> so short- and full-year policies are compared on equal terms.</p>
+<div style="font-size:0.90em; margin-top:8px; padding:5px 10px; background:#eaf3fb; border-left:3px solid #2980b9; border-radius:3px;">
+<p><strong>Note on <code>age_driving_licence</code>:</strong> This field records only 2 digits rather than a 4-digit year, making it unusable as a driving experience variable. It is excluded from all analyses.</p>
 </div>
 </div>
 </div></div>
 </section>
-<section id="slide-4-analyses-overview-univariate" class="slide level2">
-<h2>Slide 4 | Analyses Overview: Univariate</h2>
-<div style="font-size:0.70em;">
-<table class="caption-top">
-<colgroup>
-<col style="width: 25%">
-<col style="width: 25%">
-<col style="width: 25%">
-<col style="width: 25%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">#</th>
-<th style="text-align: left;">Analysis</th>
-<th style="text-align: left;">Chart Type</th>
-<th style="text-align: left;">Rationale</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">4.1</td>
-<td style="text-align: left;">Portfolio composition by policy type</td>
-<td style="text-align: left;"><code>ggbarstats()</code> + Pearson χ²</td>
-<td style="text-align: left;">Plain bar only answers <em>how many</em>. <code>ggbarstats()</code> tests whether bonus score composition differs significantly across types</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">4.2</td>
-<td style="text-align: left;">Bonus score by business type</td>
-<td style="text-align: left;"><code>ggbarstats()</code> + Pearson χ²</td>
-<td style="text-align: left;">Tests whether new business carries materially worse risk profile than portfolio renewals</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">4.3</td>
-<td style="text-align: left;">Geographic distribution</td>
-<td style="text-align: left;">Stacked 100% bar + count labels</td>
-<td style="text-align: left;">Proportions <strong>and</strong> absolute volumes both matter; pure proportions hide the Islands segment’s thin ~24,000-policy base</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">4.4</td>
-<td style="text-align: left;">Distribution of vehicle age</td>
-<td style="text-align: left;">Histogram + density overlay</td>
-<td style="text-align: left;">Right-skewed integer variable; density curve smooths the empirical shape</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">4.5</td>
-<td style="text-align: left;">Distribution of vehicle value</td>
-<td style="text-align: left;">Histogram + density (log₁₀)</td>
-<td style="text-align: left;"><strong>Mandatory log scale</strong>; two orders of magnitude spread compresses the modal range into invisibility on linear scale</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">4.6</td>
-<td style="text-align: left;">Distribution of driver age</td>
-<td style="text-align: left;">Histogram + density + reference lines</td>
-<td style="text-align: left;">Reference lines at 25 and 65 mark age boundaries reported as relevant in prior driver risk research (Meng et al., 2022; Cappelletti, 2023; ABI, 2009)</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div style="font-size:0.70em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Guiding principle:</strong> Chart type is determined by the question, not convention. <code>ggbarstats()</code> replaces plain bars for categorical variables because the chi-square test is the primary analytical question. Log scale for vehicle value is a statistical necessity, not a stylistic choice.</p>
+<section id="slide-3a-univariate-bonus-score-by-policy-type" class="slide level2">
+<h2>Slide 3a | Univariate: Bonus Score by Policy Type</h2>
+
+<img data-src="images/BonusScore_PolicyType.png" style="width:100.0%" class="r-stretch"><div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>What this tells the business:</strong> Comprehensive cover without excess (COMP_N) carries 3.5% Bad-score policyholders — nearly three times the rate of basic third-party cover. Higher-risk drivers are disproportionately self-selecting into the most protective product, which raises questions about whether its current premiums reflect the risk being absorbed.</p>
 </div>
 </section>
-<section id="slide-5-analyses-overview-bivariate" class="slide level2">
-<h2>Slide 5 | Analyses Overview: Bivariate</h2>
-<div style="font-size:0.6em;">
-<table class="caption-top">
-<colgroup>
-<col style="width: 25%">
-<col style="width: 25%">
-<col style="width: 25%">
-<col style="width: 25%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Domain</th>
-<th style="text-align: left;">Analysis</th>
-<th style="text-align: left;">Chart</th>
-<th style="text-align: left;">Rationale</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Conventional</td>
-<td style="text-align: left;">Loss ratio by policy type</td>
-<td style="text-align: left;">Violin + boxplot + Kruskal-Wallis</td>
-<td style="text-align: left;">Reveals multi-modality; non-parametric for skewed data</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Conventional</td>
-<td style="text-align: left;">Loss ratio by bonus score</td>
-<td style="text-align: left;"><code>stat_halfeye</code> + Wilcoxon pairwise</td>
-<td style="text-align: left;">Tests monotonic Good→Bad ordering statistically</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Conventional</td>
-<td style="text-align: left;">Severity by fuel type</td>
-<td style="text-align: left;"><code>stat_halfeye</code> + Wilcoxon (log)</td>
-<td style="text-align: left;">Log scale mandatory; distinguishes location shift vs tail effect</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Conventional</td>
-<td style="text-align: left;">Severity by vehicle age</td>
-<td style="text-align: left;"><code>geom_hex</code> + GAM</td>
-<td style="text-align: left;">Hexbin resolves 354K-row overplotting; GAM captures non-linearity</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Demographic</td>
-<td style="text-align: left;">Loss ratio by age bands</td>
-<td style="text-align: left;">Ridgelines + quartile shading</td>
-<td style="text-align: left;">6-group distributional shape comparison, not just medians</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Demographic</td>
-<td style="text-align: left;">Driver age × vehicle age</td>
-<td style="text-align: left;">Heatmap (6×6)</td>
-<td style="text-align: left;">Only compact format for 36-cell interaction matrix</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Brand/Status</td>
-<td style="text-align: left;">Brand tier: frequency vs severity</td>
-<td style="text-align: left;">Side-by-side <code>stat_pointinterval</code></td>
-<td style="text-align: left;">Decomposes dimensions conflated in a single loss ratio</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Brand/Status</td>
-<td style="text-align: left;">Bonus score by brand tier</td>
-<td style="text-align: left;"><code>ggbarstats()</code> + χ²</td>
-<td style="text-align: left;">Tests whether risk profile differs by brand tier</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Brand/Status</td>
-<td style="text-align: left;">Power-to-weight vs freq</td>
-<td style="text-align: left;"><code>geom_hex</code> + GAM (faceted)</td>
-<td style="text-align: left;">Tests performance-proxy signal across tiers</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Brand/Status</td>
-<td style="text-align: left;">Repair cost intensity</td>
-<td style="text-align: left;">Ranked dotplot + CI</td>
-<td style="text-align: left;">CI width communicates estimation confidence</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Behavioural</td>
-<td style="text-align: left;">Serial claimer breadth</td>
-<td style="text-align: left;">Heatmap</td>
-<td style="text-align: left;">Exposes anomalous multi-line claimers by bonus score</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Behavioural</td>
-<td style="text-align: left;">Glass claims gateway</td>
-<td style="text-align: left;">Overlaid density</td>
-<td style="text-align: left;">Right-tail differences confirm gateway signal</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Behavioural</td>
-<td style="text-align: left;">New business vs portfolio</td>
-<td style="text-align: left;"><code>ggbetweenstats</code></td>
-<td style="text-align: left;">Unified violin + significance test + effect size</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Loyalty</td>
-<td style="text-align: left;">Cancellation paradox</td>
-<td style="text-align: left;"><code>ggbarstats</code> + density</td>
-<td style="text-align: left;">Two-step: cancellation rate, then loss ratio of leavers</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Loyalty</td>
-<td style="text-align: left;">Exposure duration</td>
-<td style="text-align: left;">Ridgelines (4 bands)</td>
-<td style="text-align: left;">Shape comparison across short vs full duration</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Geographic</td>
-<td style="text-align: left;">Loss ratio by geography</td>
-<td style="text-align: left;">Point-interval 95%+99% CI</td>
-<td style="text-align: left;">CI width is the primary finding for island segments</td>
-</tr>
-</tbody>
-</table>
+<section id="slide-3b-univariate-bonus-score-by-business-type" class="slide level2">
+<h2>Slide 3b | Univariate: Bonus Score by Business Type</h2>
+
+<img data-src="images/BonusScore_NewBvPort.png" style="width:100.0%" class="r-stretch"><div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>What this tells the business:</strong> Newly acquired customers carry twice the proportion of poor claims history drivers compared to existing portfolio renewals (1.6% Bad vs 0.8%). The acquisition channel absorbs materially worse risk before renewal underwriting filters can apply — a structural gap that the current pricing may not fully account for.</p>
 </div>
 </section>
-<section id="slide-6-univariate-portfolio-composition" class="slide level2">
-<h2>Slide 6 | Univariate: Portfolio Composition</h2>
-<div class="columns">
-<div class="column" style="width:50%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide6-policy-type-1.png" width="480"></p>
-</figure>
-</div>
-</div>
-</div>
-</div><div class="column" style="width:50%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide6-bonus-business-1.png" width="460"></p>
-</figure>
-</div>
-</div>
-</div>
-</div></div>
-<div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>Interpretation:</strong> χ² (p &lt; 0.001) confirms bonus composition is not independent of policy type. <strong>COMP_N carries 3.5% Bad-score policyholders</strong>; nearly 3× the rate of other types, a textbook case of adverse selection. <strong>New Business carries 2× the Bad-score rate of Portfolio renewals</strong> (1.6% vs 0.8%), confirming the acquisition channel absorbs materially worse risk before renewal underwriting filters apply.</p>
-</div>
-</section>
-<section id="slide-7-univariate-geographic-vehicle-distributions" class="slide level2">
-<h2>Slide 7 | Univariate: Geographic &amp; Vehicle Distributions</h2>
+<section id="slide-4-univariate-geographic-vehicle-distributions" class="slide level2">
+<h2>Slide 4 | Univariate: Geographic &amp; Vehicle Distributions</h2>
 <div class="columns">
 <div class="column" style="width:34%;">
 <div class="cell">
@@ -497,11 +267,11 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Interpretation:</strong> Islands has only ~24,000 policies which makes it too few for statistically reliable loss ratio estimates (wide CIs confirmed in Slide 14). Vehicle age is right-skewed (mode 20–25 yrs), indicating an older fleet where the non-linear severity curve applies at both extremes. Vehicle value is log-normally distributed (median €24,700) making log scale mandatory as linear scale will compress the modal range into an unreadable sliver.</p>
+<p><strong>What this tells the business:</strong> The island segment, while comprising around 24,000 policies, shows much wider uncertainty bands in the loss ratio analysis (Slide 14) than other segments — reflecting greater variability in loss outcomes within that segment. Its observed loss ratio should be treated as a range estimate, not a reliable figure for pricing. Most insured vehicles are 20–25 years old on average, and the typical vehicle is worth approximately €24,700.</p>
 </div>
 </section>
-<section id="slide-8-univariate-driver-age-distribution" class="slide level2">
-<h2>Slide 8 | Univariate: Driver Age Distribution</h2>
+<section id="slide-5-univariate-driver-age-distribution" class="slide level2">
+<h2>Slide 5 | Univariate: Driver Age Distribution</h2>
 <div class="columns">
 <div class="column" style="width:56%;">
 <div class="cell">
@@ -518,15 +288,15 @@ Ang Ming Kwan
 <p>The portfolio peaks between <strong>38-42 years</strong> with a median of <strong>48</strong>, and is concentrated in the <strong>30-60 band</strong>. The distribution is moderately right-skewed, rising steeply from age 20 and tapering gradually through the 70s.</p>
 <p><strong>Young risk zone (under 25):</strong> Histogram bars are sparse and short, confirming this group is a minor fraction of total policies. Prior research associates this segment with elevated claim rates due to limited experience and higher risk-taking behaviour (Meng et al., 2022; ABI, 2009).</p>
 <p><strong>Senior risk zone (over 65):</strong> Unlike the sharp drop on the left, the right tail declines gradually. Bars at 65–75 remain visible before tapering toward 90. Prior research links increased crash risk beyond 65 to declining physical capacity (Cappelletti, 2023).</p>
-<p><strong>Statistical implication:</strong> Despite these distributional differences at the extremes, the near-zero Spearman ρ (−0.035) reflects a portfolio composition effect. The dominant 30–60 band arithmetically dilutes the age signal in aggregate correlation measures, though it remains visible in the ridgeline distributions of Slide 12.</p>
+<p><strong>What this tells the business:</strong> The portfolio is dominated by middle-aged drivers (30–60 years) — the lowest-risk group. Very young and older drivers are present but thin in volume. Because they represent such a small share of policies, their higher-risk characteristics do not show up clearly in portfolio-wide statistics. Their risk differences are visible when examining each age group’s loss pattern directly in Slide 12.</p>
 </div>
 </div></div>
 </section>
-<section id="slide-9-univariate-summary-of-findings" class="slide level2">
-<h2>Slide 9 | Univariate: Summary of Findings</h2>
+<section id="slide-6-univariate-summary-of-findings" class="slide level2">
+<h2>Slide 6 | Univariate: Summary of Findings</h2>
 <div class="columns">
-<div class="column" style="width:52%;">
-<div style="font-size:0.90em;">
+<div class="column" style="width:95%;">
+<div style="font-size:0.95em;">
 <table class="caption-top">
 <colgroup>
 <col style="width: 33%">
@@ -553,8 +323,8 @@ Ang Ming Kwan
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Municipality</strong></td>
-<td style="text-align: left;">Islands: n ≈ 24,000 only</td>
-<td style="text-align: left;">Estimates unreliable; need uncertainty buffer</td>
+<td style="text-align: left;">Islands: high loss variability</td>
+<td style="text-align: left;">Wide uncertainty bands — treat observed loss ratio as a range, not a fixed figure</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Vehicle age</strong></td>
@@ -577,20 +347,10 @@ Ang Ming Kwan
 <div style="font-size:0.90em; margin-top:6px; padding:5px 10px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
 <p><strong>Cross-variable insight:</strong> An older vehicle fleet + middle-aged driver base means demographic extremes are bypassed. Risk concentration is instead occurring in the <strong>product and acquisition channel dimensions</strong> (COMP_N adverse selection, NB vs Portfolio gap).</p>
 </div>
-</div><div class="column" style="width:48%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide9-nongood-bar-1.png" width="460"></p>
-</figure>
-</div>
-</div>
-</div>
 </div></div>
 </section>
-<section id="slide-10-bivariate-loss-ratio--policy-type-bonus-score" class="slide level2">
-<h2>Slide 10 | Bivariate: Loss Ratio- Policy Type &amp; Bonus Score</h2>
+<section id="slide-7-bivariate-loss-ratio-policy-type-bonus-score" class="slide level2">
+<h2>Slide 7 | Bivariate: Loss Ratio — Policy Type &amp; Bonus Score</h2>
 <div class="columns">
 <div class="column" style="width:50%;">
 <div class="cell">
@@ -614,11 +374,11 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.75em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>Interpretation:</strong> <strong>COMP_N carries the most adverse risk profile of all product types.</strong>- carries the highest proportion of Bad bonus score policyholders (3.5% vs 1.0%–2.0% for other types) and its median loss ratio sits just above break-even. The combination of adverse selection in its risk intake and a median position above LR = 1 makes it the product type with the most concerning risk-profitability combination. Bonus scores show counterintuitive, statistically significant differences in loss ratios. “Good” policyholders exhibit the highest median loss ratio (~2.0) and widest spread. Further investigation is needed to check classification functionality or if “Good” policies hold higher absolute values.</p>
+<p><strong>What this tells the business:</strong> Third-party policies produce the highest typical losses of all product types. COMP_N sits just above break-even on average — its profitability is marginal. Importantly, policyholders with a “Good” claims history classification generate higher typical losses than “Neutral” or “Bad” classified policyholders. This counterintuitive pattern may indicate that Good-score policies tend to cover higher-value vehicles generating larger claim costs, or that the claims history scoring system needs recalibration — either way, it warrants investigation before the score is used as a pricing input.</p>
 </div>
 </section>
-<section id="slide-11-bivariate-claim-severity---fuel-type-vehicle-age" class="slide level2">
-<h2>Slide 11 | Bivariate: Claim Severity - Fuel Type &amp; Vehicle Age</h2>
+<section id="slide-8-bivariate-claim-severity-fuel-type-vehicle-age" class="slide level2">
+<h2>Slide 8 | Bivariate: Claim Severity — Fuel Type &amp; Vehicle Age</h2>
 <div class="columns">
 <div class="column" style="width:42%;">
 <div class="cell">
@@ -645,8 +405,8 @@ Ang Ming Kwan
 <p><strong>Interpretation:</strong> Gasoline vehicles <strong>show marginally higher median claim severity</strong> than diesel vehicles (Wilcoxon p = 0.04). Both fuel types share similar distribution shapes, indicating a minor location shift rather than a difference in extreme tail events. Vehicle age <strong>shows no clear systematic relationship with claim severity</strong>. The GAM smoother remains largely flat across 0–50 years, lacking the expected U-shaped pattern. A marginal uptick for vehicles aged 50+ carries high uncertainty due to sparse data.</p>
 </div>
 </section>
-<section id="slide-12-bivariate-demographic-drivers" class="slide level2">
-<h2>Slide 12 | Bivariate: Demographic Drivers</h2>
+<section id="slide-9-bivariate-demographic-drivers" class="slide level2">
+<h2>Slide 9 | Bivariate: Demographic Drivers</h2>
 <div class="columns">
 <div class="column" style="width:54%;">
 <div class="cell">
@@ -670,11 +430,11 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Interpretation:</strong> Ridgelines confirm the <strong>actuarial U-shape</strong> - 18–25 band widest and most right-skewed; 36–55 most compact and closest to break-even; 65+ moderately elevated. The heatmap’s most prominent signal is the <strong>18–25 × 4–7 year vehicle cell</strong>, showing the highest mean claim frequency in the entire chart at <strong>0.80</strong> which is substantially above all adjacent cells and all other driver age bands at the same vehicle age. Across the 26–55 driver age bands, claim frequency is consistently higher for newer vehicles (0–3 and 4–7 years) and declines as vehicle age increases, converging toward 0.29–0.32 for vehicles aged 25+. The 65+ row shows no consistent pattern across vehicle age bands, and the newer vehicle cells (n=70 to n=176) are too small to draw reliable conclusions.</p>
+<p><strong>What this tells the business:</strong> Young drivers (18–25) produce the widest and most unpredictable loss outcomes — they are hard to price accurately. Middle-aged drivers (36–55) are the most stable and profitable group. The strongest single signal in the heatmap is young drivers paired with moderately aged vehicles (4–7 years) — this combination produces the highest claim rate in the entire portfolio at 0.80 claims per policy year. Across all middle-age groups, claim frequency is consistently higher for newer vehicles and falls as vehicle age increases, converging to a stable level for vehicles over 25 years old.</p>
 </div>
 </section>
-<section id="slide-13-bivariate-brand-status-behavioural-drivers" class="slide level2">
-<h2>Slide 13 | Bivariate: Brand, Status &amp; Behavioural Drivers</h2>
+<section id="slide-10-bivariate-brand-status-behavioural-drivers" class="slide level2">
+<h2>Slide 10 | Bivariate: Brand, Status &amp; Behavioural Drivers</h2>
 <div class="columns">
 <div class="column" style="width:46%;">
 <div class="cell">
@@ -698,11 +458,11 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>Interpretation:</strong> <strong>Luxury vehicles</strong> exhibit a statistically confirmed but <strong>small adverse selection signal</strong> (<span class="math inline">\(p &lt; 0.001\)</span>), with a <strong>higher “Bad” bonus proportion</strong> (2.0% vs.&nbsp;~1.2%) and <strong>greater extreme claim cost variability</strong>. Multivariate analysis is required to isolate independent predictive power.Glass Claims: <strong>Glass claimers</strong> show a bimodal annual claim frequency centered at 1.0 and 2.0 events, <strong>overwhelmingly co-occurring with other claim types</strong> rather than existing as isolated incidents.</p>
+<p><strong>What this tells the business:</strong> Luxury vehicle owners carry a slightly higher proportion of poor claims histories than other vehicle tiers (2.0% vs ~1.2%), though the absolute difference is small. More importantly, when luxury vehicles do generate extreme claim costs, those costs are more severe than other tiers — suggesting luxury vehicles warrant closer attention in large-loss reserving rather than routine premium loading. Separately, glass claims almost never occur in isolation: policyholders who filed a glass claim in the same year consistently had 1–2 other claims as well. Glass claim history is a reliable indicator of broader claims activity and should be treated as a renewal risk signal.</p>
 </div>
 </section>
-<section id="slide-14-bivariate-loyalty-geographic-drivers" class="slide level2">
-<h2>Slide 14 | Bivariate: Loyalty &amp; Geographic Drivers</h2>
+<section id="slide-11-bivariate-loyalty-geographic-drivers" class="slide level2">
+<h2>Slide 11 | Bivariate: Loyalty &amp; Geographic Drivers</h2>
 <div class="columns">
 <div class="column" style="width:35%;">
 <div class="cell">
@@ -726,11 +486,11 @@ Ang Ming Kwan
 </div>
 </div></div>
 <div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>Interpretation:</strong> <strong>Bad-score policyholders are the stickiest cohort</strong>. While they cancel more (25% vs.&nbsp;10% for Good), <strong>75% remain active</strong>, representing the largest absolute risk retention because they likely lack external options. <strong>Urban policies consistently generate higher median loss ratios</strong> than rural ones. Meanwhile, island segments show wide confidence intervals due to low policy volumes; using their observed medians for pricing without accounting for this statistical unreliability introduces significant risk.</p>
+<p><strong>Interpretation:</strong> <strong>Bad-score policyholders are the stickiest cohort</strong>. While they cancel more (25% vs.&nbsp;10% for Good), <strong>75% remain active</strong>, representing the largest absolute risk retention because they likely lack external options. <strong>Urban policies consistently generate higher median loss ratios</strong> than rural ones. Meanwhile, island loss ratios show wide uncertainty bands reflecting high variability in that segment’s outcomes — using only the observed median for island pricing without accounting for this uncertainty would treat an imprecise estimate as a reliable figure.</p>
 </div>
 </section>
-<section id="slide-15-conclusion-reflection" class="slide level2">
-<h2>Slide 15 | Conclusion &amp; Reflection</h2>
+<section id="slide-12-conclusion-reflection" class="slide level2">
+<h2>Slide 12 | Conclusion &amp; Reflection</h2>
 <div class="columns">
 <div class="column" style="width:52%;">
 <div style="font-size:0.90em; line-height:1.35;">
@@ -1263,7 +1023,7 @@ Ang Ming Kwan
         z-index: 9999; pointer-events: none;
       }
     </style>
-    <div class="slide-number-custom" id="custom-slide-num">slide 1 / 15</div>
+    <div class="slide-number-custom" id="custom-slide-num">slide 1 / 13</div>
     <script>
       Reveal.on('slidechanged', function(event) {
         var total = Reveal.getTotalSlides();
