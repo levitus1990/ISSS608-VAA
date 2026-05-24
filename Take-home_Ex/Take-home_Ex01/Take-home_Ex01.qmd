@@ -441,7 +441,7 @@ ggbarstats(
 ```
 :::
 
-**Interpretation:** The chi-square result confirms that newly acquired customers carry a significantly higher proportion of poor claims history policyholders than the renewal book (1.6% Bad vs 0.8%). This indicates the acquisition channel absorbs materially worse risk before renewal underwriting processes can filter it — a structural gap that the current premium structure may not fully price for equivalent coverage types.
+**Interpretation:** The chi-square result confirms that newly acquired customers carry a significantly higher proportion of poor claims history policyholders than the renewal book (1.6% Bad vs 0.8%). This indicates the acquisition channel absorbs materially worse risk before renewal underwriting processes can filter it, a structural gap that the current premium structure may not fully price for equivalent coverage types.
 
 ------------------------------------------------------------------------
 
@@ -551,7 +551,7 @@ ggplot(geo_counts,
 ```
 :::
 
-**Interpretation:** Inland Urban dominates the portfolio by a wide margin. The Islands segment, while comprising approximately 24,000 policies, shows substantially wider confidence intervals in the loss ratio analysis (Section 10) than the inland segments, reflecting greater variability in loss outcomes within this segment rather than insufficient volume per se. Further analyses for pricing in respect of Island drivers might be warranted to account for the higher variability.
+**Interpretation:** The Inland segment dominates the portfolio by a wide margin (n=112,902 Urban + n=115,715 Rural). The Islands segment is the smallest by volume at approximately 24,000 policies, a fact that is important context for interpreting the loss ratio analysis in Section 10, where the smaller Islands sample produces materially wider confidence intervals than the Inland and Coastal segments. This chart does not show uncertainty directly. That analysis is deferred to Section 10. Further pricing analysis specific to Island drivers may be warranted to account for this higher uncertainty.
 
 ------------------------------------------------------------------------
 
@@ -625,7 +625,7 @@ ggplot(insurance_viz |> filter(!is.na(vehicle_age)),
 ```
 :::
 
-**Interpretation:** The distribution is right-skewed with a mode around 20–25 years. The long tail of very old vehicles (\>40 years) represents a small segment likely insured under basic third-party cover where comprehensive replacement value is not relevant. The modal age band will be revisited in the severity-by-vehicle-age analysis in Section 5.4, where older vehicles show different cost profiles to newer ones.
+**Interpretation:** The chart shows a clearly bimodal distribution with two peaks — one around 20 years and a second around 33–35 years — separated by a visible trough near 28 years. The right side of the distribution falls away steeply after \~35 years. The tail of vehicles older than 40 years is small and sparse, which is logical since insurance premiums are no longer economically viable (premiums paid \> recoverable value) for older vehicles from consumer's point of view.
 
 ------------------------------------------------------------------------
 
@@ -661,7 +661,7 @@ ggplot(insurance_viz |> filter(!is.na(vehicle_value)),
            hjust = 0, size = 3.5, colour = "grey40") +
   labs(
     title    = "Distribution of Vehicle Value",
-    subtitle = "Log₁₀ scale; density overlay confirms log-normal shape",
+    subtitle = "Log scale; density overlay confirms log-normal shape",
     x        = "Vehicle Value (€, log scale)",
     y        = "Density"
   )
@@ -701,7 +701,9 @@ ggplot(insurance_viz |> filter(!is.na(vehicle_value)),
 ```
 :::
 
-**Interpretation:** Vehicle values in this portfolio span a wide range — from under €2,000 to over €370,000 — with a median declared value of approximately €24,700. The distribution is right-skewed on the raw scale: a small number of high-value vehicles pull the average well above the median. The log₁₀ scale is used because the raw range spans two orders of magnitude, which would compress most policies into an unreadable narrow band on a linear axis. This spread has direct pricing relevance: the same proportional loading applied uniformly across all vehicles would generate very different absolute premium contributions at the low and high ends of the value range, suggesting that value-banded rather than flat severity assumptions would better reflect the actual repair cost exposure across the portfolio.
+**Interpretation:** Vehicle values in this portfolio span a wide range,from approximately €3,000 to over €300,000 based on the visible axis range, with a median declared value of approximately €24,700. The distribution is right-skewed on the raw scale; the right skew implies the mean vehicle value sits above the median, pulled upward by a smaller number of high-value vehicles. The log₁₀ scale is used because the raw range spans two orders of magnitude, which would compress most policies into an unreadable narrow band on a linear axis. On the log scale, the distribution is approximately normal. Note that the density curve and y-axis values reflect density computed in log-space, not on the raw euro scale.
+
+The distribution's peak on the log scale is concentrated around €20,000 to €30,000, meaning the modal vehicle value band is relatively narrow even though the full range is wide. **A proportional loading applied uniformly across all vehicles would therefore be calibrated primarily to this modal band and would systematically misprice both tails.** Vehicles below approximately €10,000 would be overcharged relative to their actual severity exposure, while vehicles above approximately €80,000 would be undercharged. The underpricing risk is concentrated at the high-value end, where individual claim costs are largest, making it the more commercially dangerous tail. Value-banded rather than flat severity assumptions would better reflect the actual repair cost exposure across the portfolio.
 
 ------------------------------------------------------------------------
 
@@ -777,9 +779,210 @@ ggplot(insurance_viz, aes(x = driver_age)) +
 
 ## 5 Bivariate Analysis: Conventional Drivers
 
-### 5.1 Loss Ratio by Policy Type
+### 5.1 Profitability and Loss Ratio by Policy Type
 
 **Technique justification:** `geom_violin()` with a nested `geom_boxplot()` and Kruskal-Wallis test via `stat_compare_means()`. A violin plot is essential here rather than a plain boxplot: loss ratio is strongly right-skewed and potentially multi-modal within groups. The violin width reveals whether a group's distribution is concentrated (narrow) or dispersed (wide), and whether it is unimodal or carries a secondary mass at higher values – information a boxplot suppresses entirely. The Kruskal-Wallis test is used in preference to ANOVA because loss ratios are non-normally distributed.
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: false
+#| label: fig-profitability-policy-type
+
+# --- Prepare profitability data ---
+profitability_data <- insurance_viz |>
+  filter(total_exposure > 0, !is.na(loss_ratio)) |>
+  mutate(
+    profit_status = case_when(
+      total_claims == 0          ~ "No claims (LR = 0)",
+      loss_ratio <= 1            ~ "Profitable (0 < LR ≤ 1)",
+      TRUE                       ~ "Loss-making (LR > 1)"
+    ),
+    profit_status = factor(profit_status,
+      levels = c("Loss-making (LR > 1)",
+                 "Profitable (0 < LR ≤ 1)",
+                 "No claims (LR = 0)"),
+      ordered = TRUE)
+  )
+
+# --- Prepare summary data ---
+profit_summary <- profitability_data |>
+  count(policy_type, profit_status) |>
+  group_by(policy_type) |>
+  mutate(
+    pct     = n / sum(n) * 100,
+    n_total = sum(n)
+  ) |>
+  ungroup() |>
+  mutate(
+    tooltip_text = paste0(
+      profit_status, "\n",
+      comma(n), " policies (", round(pct, 1), "%)\n",
+      "Total in type: ", comma(n_total)
+    )
+  )
+
+# --- Run chi-square test for subtitle ---
+chi_result <- chisq.test(
+  table(profitability_data$policy_type,
+        profitability_data$profit_status)
+)
+chi_subtitle <- paste0(
+  "Pearson χ² = ", round(chi_result$statistic, 1),
+  ", df = ", chi_result$parameter,
+  ", p ", ifelse(chi_result$p.value < 0.001, "< 0.001",
+                 paste0("= ", round(chi_result$p.value, 4)))
+)
+
+# --- Build static ggplot with tooltip aesthetic ---
+p <- ggplot(profit_summary,
+            aes(x = policy_type, y = pct, fill = profit_status,
+                text = tooltip_text)) +
+  geom_col(position = "stack", width = 0.6,
+           colour = "white", linewidth = 0.3) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("No claims (LR = 0)"       = "#5C9E6E",
+               "Profitable (0 < LR ≤ 1)"  = "#F0C27F",
+               "Loss-making (LR > 1)"     = "#C0392B"),
+    name = "Profitability Status"
+  ) +
+  scale_x_discrete(
+    labels = function(x) str_wrap(x, width = 14)
+  ) +
+  labs(
+    title    = "Policy Profitability by Policy Type",
+    subtitle = chi_subtitle,
+    x        = "Policy Type",
+    y        = "Proportion (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 9),
+    legend.position = "bottom"
+  )
+
+# --- Convert to interactive plotly ---
+ggplotly(p, tooltip = "text") |>
+  layout(
+    hoverlabel = list(
+      bgcolor  = "white",
+      font     = list(size = 12)
+    ),
+    legend = list(
+      orientation = "h",
+      x = 0.5, xanchor = "center",
+      y = -0.15
+    )
+  )
+```
+
+## Code
+
+```{r}
+#| eval: false
+#| label: fig-profitability-policy-type-code
+#| fig-cap: "Profitability by policy type"
+#| fig-width: 10
+#| fig-height: 5
+
+# --- Prepare profitability data ---
+profitability_data <- insurance_viz |>
+  filter(total_exposure > 0, !is.na(loss_ratio)) |>
+  mutate(
+    profit_status = case_when(
+      total_claims == 0          ~ "No claims (LR = 0)",
+      loss_ratio <= 1            ~ "Profitable (0 < LR ≤ 1)",
+      TRUE                       ~ "Loss-making (LR > 1)"
+    ),
+    profit_status = factor(profit_status,
+      levels = c("Loss-making (LR > 1)",
+                 "Profitable (0 < LR ≤ 1)",
+                 "No claims (LR = 0)"),
+      ordered = TRUE)
+  )
+
+# --- Prepare summary data ---
+profit_summary <- profitability_data |>
+  count(policy_type, profit_status) |>
+  group_by(policy_type) |>
+  mutate(
+    pct     = n / sum(n) * 100,
+    n_total = sum(n)
+  ) |>
+  ungroup() |>
+  mutate(
+    tooltip_text = paste0(
+      profit_status, "\n",
+      comma(n), " policies (", round(pct, 1), "%)\n",
+      "Total in type: ", comma(n_total)
+    )
+  )
+
+# --- Run chi-square test for subtitle ---
+chi_result <- chisq.test(
+  table(profitability_data$policy_type,
+        profitability_data$profit_status)
+)
+chi_subtitle <- paste0(
+  "Pearson χ² = ", round(chi_result$statistic, 1),
+  ", df = ", chi_result$parameter,
+  ", p ", ifelse(chi_result$p.value < 0.001, "< 0.001",
+                 paste0("= ", round(chi_result$p.value, 4)))
+)
+
+# --- Build static ggplot with tooltip aesthetic ---
+p <- ggplot(profit_summary,
+            aes(x = policy_type, y = pct, fill = profit_status,
+                text = tooltip_text)) +
+  geom_col(position = "stack", width = 0.6,
+           colour = "white", linewidth = 0.3) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("No claims (LR = 0)"       = "#5C9E6E",
+               "Profitable (0 < LR ≤ 1)"  = "#F0C27F",
+               "Loss-making (LR > 1)"     = "#C0392B"),
+    name = "Profitability Status"
+  ) +
+  scale_x_discrete(
+    labels = function(x) str_wrap(x, width = 14)
+  ) +
+  labs(
+    title    = "Policy Profitability by Policy Type",
+    subtitle = chi_subtitle,
+    x        = "Policy Type",
+    y        = "Proportion (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 9),
+    legend.position = "bottom"
+  )
+
+# --- Convert to interactive plotly ---
+ggplotly(p, tooltip = "text") |>
+  layout(
+    hoverlabel = list(
+      bgcolor  = "white",
+      font     = list(size = 12)
+    ),
+    legend = list(
+      orientation = "h",
+      x = 0.5, xanchor = "center",
+      y = -0.15
+    )
+  )
+```
+:::
 
 ::: panel-tabset
 ## Plot
@@ -859,13 +1062,197 @@ ggplot(
 ```
 :::
 
-**Interpretation:** The Kruskal-Wallis test confirms statistically significant differences in loss ratio across policy types (p \< 2.2e-16). Third-Party (TP) exhibits the highest median loss ratio of all five types and one of the widest violins — it is both the least profitable on a median basis and highly dispersed. COMP_N (Comprehensive No Excess) shows the most concentrated mass in the 0–2 range with a relatively small IQR and its median sitting just above the break-even line of LR = 1 — meaning the typical COMP_N policy is marginally loss-making, not profitable. Its comparatively narrower violin shape indicates lower volatility than Third-Party or Combined Cover, but the median position above break-even is the more important profitability signal. All five policy types have some policies above the break-even line, confirming no product type is entirely free of loss-making policies.
+**Interpretation:** Portfolio-level profitability: The stacked bar chart shows the profitability composition across the full portfolio including zero-claim policies. Third-Party have the highest proportion of claim-free policies (approximately 93%), making it the most profitable product types at the portfolio level. The two Comprehensive types tell a different story: COMP_E (Excess) has approximately 80% claim-free policies and COMP_N (No Excess) approximately 70% — the lowest of any product type. COMP_N also carries the largest loss-making segment (LR \> 1) in proportional terms, and a notably larger "Profitable (0 \< LR ≤ 1)" band than other types, indicating that a meaningful share of its claimants do recover within the premium collected, but a substantial share do not.
+
+Claim severity among claimants: The violin chart is restricted to policies with at least one claim (LR \> 0) and shows how losses are distributed among those that do claim. The Kruskal-Wallis test confirms statistically significant differences across policy types (p \< 2.2e-16). Third-Party exhibits the highest median loss ratio among claimants (approximately LR = 5) and one of the widest violins — when a Third-Party policy claims, the loss relative to premium is both large and highly variable. The two Comprehensive types show the lowest claimant medians (approximately LR = 1.5–3.0) and narrower violins, indicating lower per-claim severity relative to premium.
+
+**The combined picture**: Third-Party appear paradoxical across the two charts: it has the highest proportion of claim-free policies (most profitable at the portfolio level) but the worst loss ratios when claims do occur. This is consistent with their simpler coverage structures — premiums are low, so when a claim occurs, it tends to be large relative to what was collected. Conversely, COMP_N has the lowest claim-free rate (worst portfolio-level profitability) but a comparatively lower claimant median — its broader coverage attracts more claims, but each claim is less extreme relative to the higher premium charged. The underwriting concern for COMP_N is not severity per claim but the sheer volume of claiming policies: at only \~70% claim-free, the profitable majority is thinner and absorbs proportionally more loss from the claiming 30%. No product type is entirely free of loss-making policies in either view.
 
 ------------------------------------------------------------------------
 
-### 5.2 Loss Ratio by Bonus Score
+### 5.2 Profitability and Loss Ratio by Bonus Score
 
 **Technique justification:** `stat_halfeye()` from **ggdist** combined with `geom_boxplot()`, with pairwise Wilcoxon tests. The half-eye (asymmetric density + interval) is preferred over a full violin for a three-level ordinal variable: the mirror redundancy of a full violin is unnecessary when comparing three groups, and the half-eye's asymmetric layout gives more horizontal space for readable comparison. Pairwise tests confirm whether the three bonus score groups have statistically different loss ratio distributions; the direction and ordering of those differences are determined by the chart itself, not assumed in advance.
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: false
+#| label: fig-profitability-bonus
+#| fig-cap: "Profitability by bonus score."
+#| fig-width: 8
+#| fig-height: 5
+
+profit_by_bonus <- insurance_viz |>
+  filter(total_exposure > 0, !is.na(loss_ratio)) |>
+  mutate(
+    profit_status = case_when(
+      total_claims == 0  ~ "No claims (LR = 0)",
+      loss_ratio <= 1    ~ "Profitable (0 < LR ≤ 1)",
+      TRUE               ~ "Loss-making (LR > 1)"
+    ),
+    profit_status = factor(profit_status,
+      levels = c("Loss-making (LR > 1)",
+                 "Profitable (0 < LR ≤ 1)",
+                 "No claims (LR = 0)"),
+      ordered = TRUE)
+  )
+
+# --- Summary for plotly tooltips ---
+bonus_summary <- profit_by_bonus |>
+  count(bonus_score, profit_status) |>
+  group_by(bonus_score) |>
+  mutate(
+    pct     = n / sum(n) * 100,
+    n_total = sum(n)
+  ) |>
+  ungroup() |>
+  mutate(
+    tooltip_text = paste0(
+      profit_status, "\n",
+      comma(n), " policies (", round(pct, 1), "%)\n",
+      "Total in group: ", comma(n_total))
+  )
+
+# --- Chi-square for subtitle ---
+chi_bonus <- chisq.test(
+  table(profit_by_bonus$bonus_score,
+        profit_by_bonus$profit_status)
+)
+chi_bonus_sub <- paste0(
+  "Pearson χ² = ", round(chi_bonus$statistic, 1),
+  ", df = ", chi_bonus$parameter,
+  ", p ", ifelse(chi_bonus$p.value < 0.001, "< 0.001",
+                 paste0("= ", round(chi_bonus$p.value, 4)))
+)
+
+# --- Interactive stacked bar ---
+p_bonus <- ggplot(bonus_summary,
+       aes(x = bonus_score, y = pct, fill = profit_status,
+           text = tooltip_text)) +
+  geom_col(position = "stack", width = 0.6,
+           colour = "white", linewidth = 0.3) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("No claims (LR = 0)"       = "#5C9E6E",
+               "Profitable (0 < LR ≤ 1)"  = "#F0C27F",
+               "Loss-making (LR > 1)"     = "#C0392B"),
+    name = "Profitability Status"
+  ) +
+  labs(
+    title    = "Policy Profitability by Bonus Score",
+    subtitle = chi_bonus_sub,
+    x        = "Bonus Score",
+    y        = "Proportion (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 9),
+    legend.position = "bottom"
+  )
+
+ggplotly(p_bonus, tooltip = "text") |>
+  layout(
+    hoverlabel = list(bgcolor = "white", font = list(size = 12)),
+    legend = list(orientation = "h", x = 0.5,
+                  xanchor = "center", y = -0.15)
+  )
+```
+
+## Code
+
+```{r}
+#| eval: false
+#| label: fig-profitability-bonus-code
+#| fig-cap: "Profitability by bonus score."
+#| fig-width: 8
+#| fig-height: 5
+
+profit_by_bonus <- insurance_viz |>
+  filter(total_exposure > 0, !is.na(loss_ratio)) |>
+  mutate(
+    profit_status = case_when(
+      total_claims == 0  ~ "No claims (LR = 0)",
+      loss_ratio <= 1    ~ "Profitable (0 < LR ≤ 1)",
+      TRUE               ~ "Loss-making (LR > 1)"
+    ),
+    profit_status = factor(profit_status,
+      levels = c("Loss-making (LR > 1)",
+                 "Profitable (0 < LR ≤ 1)",
+                 "No claims (LR = 0)"),
+      ordered = TRUE)
+  )
+
+# --- Summary for plotly tooltips ---
+bonus_summary <- profit_by_bonus |>
+  count(bonus_score, profit_status) |>
+  group_by(bonus_score) |>
+  mutate(
+    pct     = n / sum(n) * 100,
+    n_total = sum(n)
+  ) |>
+  ungroup() |>
+  mutate(
+    tooltip_text = paste0(
+      profit_status, "\n",
+      comma(n), " policies (", round(pct, 1), "%)\n",
+      "Total in group: ", comma(n_total))
+  )
+
+# --- Chi-square for subtitle ---
+chi_bonus <- chisq.test(
+  table(profit_by_bonus$bonus_score,
+        profit_by_bonus$profit_status)
+)
+chi_bonus_sub <- paste0(
+  "Pearson χ² = ", round(chi_bonus$statistic, 1),
+  ", df = ", chi_bonus$parameter,
+  ", p ", ifelse(chi_bonus$p.value < 0.001, "< 0.001",
+                 paste0("= ", round(chi_bonus$p.value, 4)))
+)
+
+# --- Interactive stacked bar ---
+p_bonus <- ggplot(bonus_summary,
+       aes(x = bonus_score, y = pct, fill = profit_status,
+           text = tooltip_text)) +
+  geom_col(position = "stack", width = 0.6,
+           colour = "white", linewidth = 0.3) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("No claims (LR = 0)"       = "#5C9E6E",
+               "Profitable (0 < LR ≤ 1)"  = "#F0C27F",
+               "Loss-making (LR > 1)"     = "#C0392B"),
+    name = "Profitability Status"
+  ) +
+  labs(
+    title    = "Policy Profitability by Bonus Score",
+    subtitle = chi_bonus_sub,
+    x        = "Bonus Score",
+    y        = "Proportion (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 9),
+    legend.position = "bottom"
+  )
+
+ggplotly(p_bonus, tooltip = "text") |>
+  layout(
+    hoverlabel = list(bgcolor = "white", font = list(size = 12)),
+    legend = list(orientation = "h", x = 0.5,
+                  xanchor = "center", y = -0.15)
+  )
+```
+:::
 
 ::: panel-tabset
 ## Plot
@@ -949,7 +1336,11 @@ ggplot(
 ```
 :::
 
-**Interpretation:** Policies classified as "Good" claims history show higher typical loss ratios (median \~2.0) and more variable outcomes than "Neutral" or "Bad" policies — a counterintuitive finding confirmed across all three group comparisons. Two interpretations are plausible: either Good-score policies tend to insure higher-value assets that generate larger absolute claim costs when incidents occur, or the bonus scoring system is not effectively separating risk quality in this portfolio. Either possibility has direct implications for how the bonus classification is used in pricing decisions, and warrants investigation before the scoring system is applied as a rating factor. All three bonus score groups have policies above the break-even line of LR = 1.
+**Interpretation:** Portfolio-level profitability: The profitability profile follows the expected direction: Good-score policies have the highest claim-free rate (approximately 85%), while Bad-score policies carry the largest loss-making proportion. The bonus scoring system discriminates risk at the portfolio level as intended.
+
+Claim severity among claimants: Among policies that claimed (LR \> 0), the ordering reverses. Good-score claimants show the highest median loss ratio (approximately 2.5) and widest distribution, while Bad-score claimants show the lowest median (approximately 1.5). All three pairwise Wilcoxon tests are significant, with the Neutral vs Bad comparison (p \< 0.01) also showing an unexpected ordering — Bad-score claimants record a slightly lower median than Neutral ones.
+
+**Combined picture**: The bonus score functions as a frequency discriminator, not a severity discriminator. Bad-score policies claim more often, but their premiums are already loaded for that higher frequency, making each individual claim less extreme relative to premium collected. Good-score claimants are rare, but when they do claim the loss is large likely because they disproportionately hold higher-value or broader-coverage policies. Pricing models that apply the bonus score as a flat loading across both frequency and severity may over-correct on severity for Bad-score policies while under-reserving for occasional high-cost Good-score claims. A decomposed approach which applues the bonus score to frequency and using vehicle value or policy type for severity would better reflect this pattern.
 
 ------------------------------------------------------------------------
 
@@ -1045,7 +1436,7 @@ ggplot(
 ```
 :::
 
-**Interpretation:** Gasoline vehicles show marginally higher claim severity than diesel vehicles — the difference is statistically confirmed (p = 0.04) but the gap in typical repair costs is small, as both fuel types have their bulk of claims concentrated in the €300–€1,000 range. Both distributions are similar in shape, indicating a small consistent difference in typical claim cost rather than a difference in catastrophic claim exposure. The mechanism behind this difference — for example, whether diesel and gasoline vehicles in this portfolio differ systematically in size or value — is not contained in this dataset and would require additional variables to investigate. Whether the magnitude of this difference justifies separate fuel-type pricing is a commercial decision that would benefit from a cost-benefit analysis of the additional rating complexity introduced.
+**Interpretation:** Gasoline vehicles show marginally higher claim severity than diesel vehicles. The difference is statistically confirmed (p = 0.04) but the gap is small. Both fuel types have similar distributional shapes on the log scale, with bulk density concentrated between approximately €400 and €1,500 and medians sitting close together around €500–€800. This indicates a modest location shift in typical repair cost rather than a difference in catastrophic claim exposure, as the upper tails extend to similar ranges for both groups. Zero-incurred claims are excluded from this chart so that the distributions reflect genuine repair costs; 1,287 policies with missing fuel type are also excluded. Whether this marginal difference reflects a genuine fuel-type effect or is confounded by vehicle value or brand composition — variables available in this dataset but not controlled for here, cannot be determined from this chart alone. A stratified analysis by vehicle value band would clarify whether the gap persists within comparable vehicle segments. Unless a confound-controlled analysis confirms the gap, the magnitude is unlikely to justify the additional rating complexity of separate fuel-type pricing.
 
 ------------------------------------------------------------------------
 
@@ -1121,13 +1512,221 @@ ggplot(
 ```
 :::
 
-**Interpretation:** Repair costs per claim do not vary materially with vehicle age across most of the fleet. The trend line is broadly flat for vehicles aged 5–50 years — the range covering the majority of policies. There is a marginal increase in repair costs for very old vehicles (50+ years), consistent with specialist parts being harder to source for older models, though this is based on a relatively small number of policies at that age extreme and carries higher uncertainty. For pricing purposes, vehicle age alone does not appear to be a strong predictor of repair cost variation in this portfolio across the bulk of the distribution — other vehicle characteristics such as declared value are likely more important drivers of severity differences.
+**Interpretation:** Repair costs per claim do not vary materially with vehicle age across the bulk of the fleet. The GAM smoother is broadly flat across the 5–50 year range at approximately €500–€700, with hexbin density confirming that the vast majority of claims are concentrated in this band. Zero-incurred claims are excluded so the distribution reflects genuine repair costs. For pricing purposes, **vehicle age alone is not a useful severity predictor in this portfolio**. An underwriter applying age-based severity loadings would be adding rating complexity without meaningfully improving risk differentiation.
 
 ## 6 Bivariate Analysis: Demographic Drivers
 
-### 6.1 Loss Ratio Distributions Across Driver Age Bands
+### 6.1 Profitability and Loss Ratio Distributions Across Driver Age Bands
 
 **Technique justification:** `stat_density_ridges()` from **ggridges** with quantile shading (`quantiles = 4`, `calc_ecdf = TRUE`). Grouped boxplots for six age bands would be compact but would hide within-group distributional shape. Prior research on driver age and claim rates (Meng et al., 2022; Cappelletti, 2023; ABI, 2009) suggests elevated loss ratios at young and old age extremes. Whether this pattern is visible in this dataset, and to what degree, is the question the ridgeline chart investigates. Ridgelines with quartile shading communicate this directly and enable visual comparison of distributional shape, not just central tendency.
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: false
+#| label: fig-claimrate-age-bands
+#| fig-cap: "Claim rate across driver age bands."
+#| fig-width: 9
+#| fig-height: 6
+
+# --- Claim rate by driver age band ---
+age_claim_rate <- insurance_viz |>
+  filter(total_exposure > 0, !is.na(driver_age_band),
+         !is.na(loss_ratio)) |>
+  mutate(
+    profit_status = case_when(
+      total_claims == 0  ~ "No claims (LR = 0)",
+      loss_ratio <= 1    ~ "Profitable (0 < LR ≤ 1)",
+      TRUE               ~ "Loss-making (LR > 1)"
+    ),
+    profit_status = factor(profit_status,
+      levels = c("Loss-making (LR > 1)",
+                 "Profitable (0 < LR ≤ 1)",
+                 "No claims (LR = 0)"),
+      ordered = TRUE)
+  ) |>
+  count(driver_age_band, profit_status) |>
+  group_by(driver_age_band) |>
+  mutate(
+    pct     = n / sum(n) * 100,
+    n_total = sum(n)
+  ) |>
+  ungroup() |>
+  mutate(
+    tooltip_text = paste0(
+      profit_status, "\n",
+      comma(n), " policies (", round(pct, 1), "%)\n",
+      "Total in band: ", comma(n_total))
+  )
+
+chi_age <- chisq.test(
+  table(
+    insurance_viz |>
+      filter(total_exposure > 0, !is.na(driver_age_band),
+             !is.na(loss_ratio)) |>
+      mutate(profit_status = case_when(
+        total_claims == 0  ~ "No claims",
+        loss_ratio <= 1    ~ "Profitable",
+        TRUE               ~ "Loss-making")) |>
+      pull(driver_age_band),
+    insurance_viz |>
+      filter(total_exposure > 0, !is.na(driver_age_band),
+             !is.na(loss_ratio)) |>
+      mutate(profit_status = case_when(
+        total_claims == 0  ~ "No claims",
+        loss_ratio <= 1    ~ "Profitable",
+        TRUE               ~ "Loss-making")) |>
+      pull(profit_status)
+  )
+)
+
+chi_age_sub <- paste0(
+  "Pearson χ² = ", round(chi_age$statistic, 1),
+  ", df = ", chi_age$parameter,
+  ", p ", ifelse(chi_age$p.value < 0.001, "< 0.001",
+                 paste0("= ", round(chi_age$p.value, 4)))
+)
+
+p_age <- ggplot(age_claim_rate,
+       aes(x = driver_age_band, y = pct, fill = profit_status,
+           text = tooltip_text)) +
+  geom_col(position = "stack", width = 0.6,
+           colour = "white", linewidth = 0.3) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("No claims (LR = 0)"       = "#5C9E6E",
+               "Profitable (0 < LR ≤ 1)"  = "#F0C27F",
+               "Loss-making (LR > 1)"     = "#C0392B"),
+    name = "Profitability Status"
+  ) +
+  labs(
+    title    = "Policy Profitability by Driver Age Band",
+    subtitle = chi_age_sub,
+    x        = "Driver Age Band",
+    y        = "Proportion (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 9),
+    legend.position = "bottom"
+  )
+
+ggplotly(p_age, tooltip = "text") |>
+  layout(
+    hoverlabel = list(bgcolor = "white", font = list(size = 12)),
+    legend = list(orientation = "h", x = 0.5,
+                  xanchor = "center", y = -0.2)
+  )
+```
+
+## Code
+
+```{r}
+#| eval: false
+#| label: fig-claimrate-age-bands-code
+#| fig-cap: "Claim rate across driver age bands."
+#| fig-width: 9
+#| fig-height: 6
+
+# --- Claim rate by driver age band ---
+age_claim_rate <- insurance_viz |>
+  filter(total_exposure > 0, !is.na(driver_age_band),
+         !is.na(loss_ratio)) |>
+  mutate(
+    profit_status = case_when(
+      total_claims == 0  ~ "No claims (LR = 0)",
+      loss_ratio <= 1    ~ "Profitable (0 < LR ≤ 1)",
+      TRUE               ~ "Loss-making (LR > 1)"
+    ),
+    profit_status = factor(profit_status,
+      levels = c("Loss-making (LR > 1)",
+                 "Profitable (0 < LR ≤ 1)",
+                 "No claims (LR = 0)"),
+      ordered = TRUE)
+  ) |>
+  count(driver_age_band, profit_status) |>
+  group_by(driver_age_band) |>
+  mutate(
+    pct     = n / sum(n) * 100,
+    n_total = sum(n)
+  ) |>
+  ungroup() |>
+  mutate(
+    tooltip_text = paste0(
+      profit_status, "\n",
+      comma(n), " policies (", round(pct, 1), "%)\n",
+      "Total in band: ", comma(n_total))
+  )
+
+chi_age <- chisq.test(
+  table(
+    insurance_viz |>
+      filter(total_exposure > 0, !is.na(driver_age_band),
+             !is.na(loss_ratio)) |>
+      mutate(profit_status = case_when(
+        total_claims == 0  ~ "No claims",
+        loss_ratio <= 1    ~ "Profitable",
+        TRUE               ~ "Loss-making")) |>
+      pull(driver_age_band),
+    insurance_viz |>
+      filter(total_exposure > 0, !is.na(driver_age_band),
+             !is.na(loss_ratio)) |>
+      mutate(profit_status = case_when(
+        total_claims == 0  ~ "No claims",
+        loss_ratio <= 1    ~ "Profitable",
+        TRUE               ~ "Loss-making")) |>
+      pull(profit_status)
+  )
+)
+
+chi_age_sub <- paste0(
+  "Pearson χ² = ", round(chi_age$statistic, 1),
+  ", df = ", chi_age$parameter,
+  ", p ", ifelse(chi_age$p.value < 0.001, "< 0.001",
+                 paste0("= ", round(chi_age$p.value, 4)))
+)
+
+p_age <- ggplot(age_claim_rate,
+       aes(x = driver_age_band, y = pct, fill = profit_status,
+           text = tooltip_text)) +
+  geom_col(position = "stack", width = 0.6,
+           colour = "white", linewidth = 0.3) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("No claims (LR = 0)"       = "#5C9E6E",
+               "Profitable (0 < LR ≤ 1)"  = "#F0C27F",
+               "Loss-making (LR > 1)"     = "#C0392B"),
+    name = "Profitability Status"
+  ) +
+  labs(
+    title    = "Policy Profitability by Driver Age Band",
+    subtitle = chi_age_sub,
+    x        = "Driver Age Band",
+    y        = "Proportion (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 9),
+    legend.position = "bottom"
+  )
+
+ggplotly(p_age, tooltip = "text") |>
+  layout(
+    hoverlabel = list(bgcolor = "white", font = list(size = 12)),
+    legend = list(orientation = "h", x = 0.5,
+                  xanchor = "center", y = -0.2)
+  )
+```
+:::
 
 ::: panel-tabset
 ## Plot
@@ -1229,7 +1828,11 @@ ggplot(
 ```
 :::
 
-**Interpretation:** The 18–25 age band shows the widest distribution and the heaviest right skew among all six bands with a larger share of policies in this group producing high loss ratios compared to middle-age bands. The 36–55 bands show the most compact distributions with the lowest median loss ratios. The 65+ band shows a moderately wider distribution than the 36–55 group and a slightly elevated median. These observed differences in distributional shape and spread are consistent with the patterns reported in prior driver risk research (Meng et al., 2022; Cappelletti, 2023), though caution is warranted given the thin representation of the under-25 and over-65 segments in this portfolio. The estimates for those bands carry more uncertainty than those for the well-populated middle-age bands.
+**Interpretation:** Portfolio-level profitability: The 18–25 age band stands out with the lowest claim-free rate (approximately 80%). However, while 18-25 age has also the highest non-profitable segment of 10%, it is only marginal compared across other age bands.
+
+Claimant loss ratio distributions: Among claimants (LR \> 0), the key distinction across age bands is not tail extent as all six bands reach LR = 6, but how density is distributed across the range. The 36–55 bands concentrate the largest share of claimants in the low loss ratio region, with their 1st quartile (purple) extending to approximately LR = 0.8–1.0, meaning 25% of claimants fall near or below break-even. The 18–25 band has a much narrower purple region, indicating fewer low-loss-ratio claimants and a higher number of higher-loss-ratio claimants. The 65+ band is comparable in shape to 56–65, with no visible deterioration at the older extreme.
+
+**Combined implication**: Young drivers (18–25) are the worst-performing segment on both dimensions. They claim more often and produce worse outcomes when they do claim. This double exposure makes them the strongest candidate for age-based pricing loadings. The 65+ band, by contrast, shows no meaningful deterioration on either measure relative to adjacent age bands in this portfolio, warranting caution before applying age-based surcharges to older drivers without further evidence. The middle bands (36–55) are the portfolio's profitability anchor and the appropriate baseline for age-differentiated pricing.
 
 ------------------------------------------------------------------------
 
@@ -1343,7 +1946,7 @@ ggplot(heatmap_data,
 ```
 :::
 
-**Interpretation:** The heatmap reveals two notable patterns. First, the 18–25 × 4–7 cell stands out as the darkest cell in the entire chart with a mean claim frequency of 0.80 (n=1,296) — substantially higher than all adjacent cells and all other age bands at the same vehicle age. This is the single most prominent signal in the heatmap. Second, across the middle driver age bands (26–55), claim frequency is consistently higher for newer vehicles (0–3 and 4–7 year bands, showing values of 0.52–0.58) and declines as vehicle age increases, converging toward approximately 0.29–0.32 for vehicles aged 25+ years. The 65+ row does not show a clear pattern of elevated frequency for newer vehicles: values range from 0.20 to 0.32 across vehicle age bands without a consistent directional trend, and the small cell sizes (n=70 to n=176 for newer vehicle bands) mean these estimates carry substantial uncertainty and should not be over-interpreted. For cells with smaller policy counts, the mean claim frequency is less stable — a small number of unusual policies can shift the average substantially. These cells should be read as indicative rather than definitive, and their patterns should not be acted upon without cross-referencing adjacent cells or accumulating more data in those segments.
+**Interpretation:** The heatmap reveals two notable patterns. First, the 18–25 × 4–7 cell records the highest mean claim frequency in the chart at 0.80 (n=1,296) — the single darkest cell overall. The adjacent 18–25 × 0–3 cell (0.51, n=474) is also elevated, suggesting that young drivers paired with newer vehicles (0–7 years old) as a group carry distinctly higher claim rates than middle-age driver bands at the same vehicle ages. This is the most prominent signal in the heatmap, though it should be read as a young-driver × newer-vehicle pattern rather than the single 4–7 year band in isolation. Second, across the middle driver age bands (26–55), claim frequency is consistently higher for newer vehicles (0–3 and 4–7 year bands, showing values of 0.52–0.58) and declines as vehicle age increases, converging toward approximately 0.29–0.32 for vehicles aged 25+ years. The 65+ row does not show a clear pattern of elevated frequency for newer vehicles: values range from 0.20 to 0.32 across vehicle age bands without a consistent directional trend, and the small cell sizes (n=70 to n=176 for newer vehicle bands) mean these estimates carry substantial uncertainty and should not be over-interpreted. For cells with smaller policy counts, the mean claim frequency is less stable — a small number of unusual policies can shift the average substantially. These cells should be read as indicative rather than definitive, and their patterns should not be acted upon without cross-referencing adjacent cells or accumulating more data in those segments.
 
 ------------------------------------------------------------------------
 
@@ -1351,7 +1954,7 @@ ggplot(heatmap_data,
 
 ### 7.1 Do Prestige Brand Drivers Make Fewer Claims – or Just Different Ones?
 
-**Technique justification:** Side-by-side `stat_pointinterval()` panels from **ggdist** – one for claim frequency, one for claim severity – composed with **patchwork**. A single loss ratio chart conflates two fundamentally different risk dimensions: frequency (how often) and severity (how much each time). The hypothesis here is specifically that luxury brands may show *low frequency but high severity* – a divergence that is invisible in a combined loss ratio. Presenting both dimensions side-by-side with median + CI makes this decomposition explicit.
+**Technique justification:** Side-by-side panels – one for claim rate, one for claim severity – composed with **patchwork**. A single chart conflates two fundamentally different risk dimensions: claim rate (how often) and severity (how much each time). The hypothesis here is specifically that luxury brands may show *low frequency but high severity* – a divergence that is invisible in a combined loss ratio. Presenting both dimensions side-by-side with claim rate + CI makes this decomposition explicit.
 
 ::: panel-tabset
 ## Plot
@@ -1359,29 +1962,43 @@ ggplot(heatmap_data,
 ```{r}
 #| echo: false
 #| label: fig-brand-freq-severity
-#| fig-cap: "Claim frequency (left) and claim severity (right) by brand tier. Side-by-side panels decompose two distinct risk dimensions that a single loss ratio chart conflates."
+#| fig-cap: "Claim rate (left) and claim severity (right) by brand tier. Side-by-side panels decompose two distinct risk dimensions that a single loss ratio chart conflates."
 #| fig-width: 11
 #| fig-height: 5
 
 brand_data <- insurance_viz |>
   filter(!is.na(brand_tier), total_exposure > 0)
 
-p_freq <- ggplot(brand_data,
-                 aes(x = brand_tier, y = claim_frequency)) +
-  stat_pointinterval(
-    .width     = c(0.95, 0.99),
-    point_size = 3,
-    aes(colour = factor(after_stat(.width)))
-  ) +
-  scale_colour_manual(
-    name   = "CI",
-    values = c("0.95" = "#4B8BBE", "0.99" = "#E07B39"),
-    labels = c("95%", "99%")
+# --- Left panel: claim rate (replaces stat_pointinterval on zero-inflated frequency) ---
+freq_summary <- brand_data |>
+  group_by(brand_tier) |>
+  summarise(
+    n_total     = n(),
+    n_claimants = sum(total_claims > 0),
+    claim_rate  = n_claimants / n_total * 100,
+    mean_freq   = mean(claim_frequency, na.rm = TRUE),
+    .groups     = "drop"
+  )
+
+p_freq <- ggplot(freq_summary,
+       aes(x = brand_tier, y = claim_rate, fill = brand_tier)) +
+  geom_col(width = 0.5, show.legend = FALSE) +
+  geom_text(aes(label = paste0(round(claim_rate, 1), "%")),
+            vjust = -0.5, size = 3.5, fontface = "bold") +
+  scale_fill_manual(
+    values = c("Luxury" = "#8E6ABF",
+               "Upper-mid / Mass-market" = "#4B8BBE",
+               "Budget / Commercial" = "#5C9E6E")
   ) +
   scale_x_discrete(labels = function(x) str_wrap(x, width = 12)) +
-  labs(title = "Claim frequency by brand tier",
-       x = "Brand Tier", y = "Claim\nFrequency")
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = expansion(mult = c(0, 0.15))
+  ) +
+  labs(title = "Claim rate by brand tier",
+       x = "Brand Tier", y = "Claim Rate (%)")
 
+# --- Right panel: severity (unchanged) ---
 p_sev <- ggplot(
   brand_data |> filter(!is.na(severity_capped), severity_capped > 0),
   aes(x = brand_tier, y = severity_capped)
@@ -1398,17 +2015,18 @@ p_sev <- ggplot(
   ) +
   scale_y_log10(
     labels = comma,
-    breaks = c(10, 50, 100, 500, 1000, 5000),
+    breaks = c(10, 50, 100, 500, 1000, 5000, 10000),
     limits = c(10, 7500)
   ) +
   scale_x_discrete(labels = function(x) str_wrap(x, width = 12)) +
   labs(title = "Claim severity by brand tier",
        x = "Brand Tier", y = "Claim Severity\n(€, log scale)")
 
+# --- Combine ---
 p_freq + p_sev +
   plot_annotation(
     title    = "Brand Tier: Frequency vs Severity Decomposition",
-    subtitle = "Median point + 95%/99% confidence intervals",
+    subtitle = "Claim rate (% of policies with ≥1 claim) and severity median + 95%/99% CI",
     theme    = theme(
       plot.title    = element_text(face = "bold", hjust = 0.5),
       plot.subtitle = element_text(hjust = 0.5, colour = "grey40")
@@ -1422,29 +2040,43 @@ p_freq + p_sev +
 ```{r}
 #| eval: false
 #| label: fig-brand-freq-severity-code
-#| fig-cap: "Claim frequency (left) and claim severity (right) by brand tier. Side-by-side panels decompose two distinct risk dimensions that a single loss ratio chart conflates."
+#| fig-cap: "Claim rate (left) and claim severity (right) by brand tier. Side-by-side panels decompose two distinct risk dimensions that a single loss ratio chart conflates."
 #| fig-width: 11
 #| fig-height: 5
 
 brand_data <- insurance_viz |>
   filter(!is.na(brand_tier), total_exposure > 0)
 
-p_freq <- ggplot(brand_data,
-                 aes(x = brand_tier, y = claim_frequency)) +
-  stat_pointinterval(
-    .width     = c(0.95, 0.99),
-    point_size = 3,
-    aes(colour = factor(after_stat(.width)))
-  ) +
-  scale_colour_manual(
-    name   = "CI",
-    values = c("0.95" = "#4B8BBE", "0.99" = "#E07B39"),
-    labels = c("95%", "99%")
+# --- Left panel: claim rate (replaces stat_pointinterval on zero-inflated frequency) ---
+freq_summary <- brand_data |>
+  group_by(brand_tier) |>
+  summarise(
+    n_total     = n(),
+    n_claimants = sum(total_claims > 0),
+    claim_rate  = n_claimants / n_total * 100,
+    mean_freq   = mean(claim_frequency, na.rm = TRUE),
+    .groups     = "drop"
+  )
+
+p_freq <- ggplot(freq_summary,
+       aes(x = brand_tier, y = claim_rate, fill = brand_tier)) +
+  geom_col(width = 0.5, show.legend = FALSE) +
+  geom_text(aes(label = paste0(round(claim_rate, 1), "%")),
+            vjust = -0.5, size = 3.5, fontface = "bold") +
+  scale_fill_manual(
+    values = c("Luxury" = "#8E6ABF",
+               "Upper-mid / Mass-market" = "#4B8BBE",
+               "Budget / Commercial" = "#5C9E6E")
   ) +
   scale_x_discrete(labels = function(x) str_wrap(x, width = 12)) +
-  labs(title = "Claim frequency by brand tier",
-       x = "Brand Tier", y = "Claim\nFrequency")
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = expansion(mult = c(0, 0.15))
+  ) +
+  labs(title = "Claim rate by brand tier",
+       x = "Brand Tier", y = "Claim Rate (%)")
 
+# --- Right panel: severity (unchanged) ---
 p_sev <- ggplot(
   brand_data |> filter(!is.na(severity_capped), severity_capped > 0),
   aes(x = brand_tier, y = severity_capped)
@@ -1461,17 +2093,18 @@ p_sev <- ggplot(
   ) +
   scale_y_log10(
     labels = comma,
-    breaks = c(10, 50, 100, 500, 1000, 5000),
+    breaks = c(10, 50, 100, 500, 1000, 5000, 10000),
     limits = c(10, 7500)
   ) +
   scale_x_discrete(labels = function(x) str_wrap(x, width = 12)) +
   labs(title = "Claim severity by brand tier",
        x = "Brand Tier", y = "Claim Severity\n(€, log scale)")
 
+# --- Combine ---
 p_freq + p_sev +
   plot_annotation(
     title    = "Brand Tier: Frequency vs Severity Decomposition",
-    subtitle = "Median point + 95%/99% confidence intervals",
+    subtitle = "Claim rate (% of policies with ≥1 claim) and severity median + 95%/99% CI",
     theme    = theme(
       plot.title    = element_text(face = "bold", hjust = 0.5),
       plot.subtitle = element_text(hjust = 0.5, colour = "grey40")
@@ -1481,7 +2114,11 @@ p_freq + p_sev +
 ```
 :::
 
-**Interpretation:** The two panels together reveal a clear and commercially significant pattern. On claim frequency (left), all three brand tiers show near-identical median values close to zero with overlapping confidence intervals – meaning brand tier does **not** discriminate how often claims occur. The "prestige paradox" hypothesis of luxury drivers claiming less frequently is **not supported**: frequency is statistically indistinguishable across tiers. However, the severity panel (right) tells the opposite story. All three tiers show median severity around €500–650, but the confidence intervals diverge substantially at the upper end. Luxury brands show a notably tighter 95% CI band in the lower range, while the 99% CI extends further upward than the other tiers – confirming that while the *typical* luxury claim costs a similar amount to a mass-market claim, the *extreme* claims from luxury vehicles are disproportionately costly. For an underwriter, the actionable implication is: brand tier loading should be applied **not** to frequency (which is uniform) but as a severity tail loading, particularly for catastrophic claims. The risk of under-reserving luxury vehicle large losses is real and not captured by a combined loss ratio view.
+**Interpretation:** Claim rate (left panel): Luxury vehicles have the highest claim rate at 17.5%, followed by Upper-mid/Mass-market at 14.0% and Budget/Commercial at 12.8%. Contrary to the "prestige paradox" hypothesis that luxury drivers claim less frequently, they claim more often: a nearly 5 percentage point gap over Budget/Commercial. This is a meaningful difference for portfolio management: a Luxury book of 1,000 policies would generate approximately 175 claims versus 128 from an equivalent Budget book.
+
+Claim severity (right panel): All three tiers show similar median severity around €500–€700 on the log scale, meaning the typical claim costs roughly the same regardless of brand tier. The critical difference is in the tails: the Luxury tier's 99% CI extends further upward than the other tiers, confirming that extreme claims from luxury vehicles are disproportionately costly even though typical claims are not.
+
+**Combined implication**: The original report's conclusion that brand tier loading should apply only to severity, not frequency, is reversed by this data. Luxury vehicles are worse on both dimensions — they claim more often and carry heavier tail risk when they do. **Pricing models should apply a frequency loading to Luxury policies to reflect the higher claim rate, and a separate severity tail loading to reserve for the disproportionate catastrophic claim exposure**. A flat loss ratio view would obscure this dual signal by averaging the two effects into a single metric.
 
 ------------------------------------------------------------------------
 
@@ -1576,7 +2213,7 @@ ggbarstats(
 ```
 :::
 
-**Interpretation:** Luxury vehicles are held by a somewhat higher proportion of policyholders with poor or deteriorating claims histories than other brand tiers — 2.0% Bad-score policyholders versus 1.2%–1.3% for other tiers, with a similarly elevated Neutral proportion. The association is confirmed but the absolute difference between tiers is small, meaning brand tier alone would be a weak basis for differential pricing. Whether it adds independent pricing value beyond the bonus score and vehicle value is a question that multivariate modelling could answer but this analysis alone cannot. The dataset identifies the association but cannot determine whether brand tier carries independent predictive power once other variables are held constant.
+**Interpretation:** Luxury vehicles are held by a somewhat higher proportion of policyholders with poor or deteriorating claims histories than other brand tiers - 2.0% Bad-score policyholders versus 1.2%–1.3% for other tiers, with a similarly elevated Neutral proportion. The association is confirmed but the absolute difference between tiers is small, meaning brand tier alone would be a weak basis for differential pricing. Whether it adds independent pricing value beyond the bonus score and vehicle value is a question that multivariate modelling could answer but this analysis alone cannot. The dataset identifies the association but cannot determine whether brand tier carries independent predictive power once other variables are held constant.
 
 ------------------------------------------------------------------------
 
@@ -1652,7 +2289,7 @@ ggplot(
 ```
 :::
 
-**Interpretation:** Vehicle performance, measured by power-to-weight ratio, shows no meaningful relationship with claim frequency across any of the three brand tiers — the relationship is flat in all panels. This means adding vehicle performance as a pricing factor would increase model complexity without improving the accuracy of risk differentiation. The portfolio is dominated by mainstream vehicles where performance variation is relatively narrow, and genuinely high-performance vehicles are too few in this dataset to generate a detectable signal. The variable may contribute in a multivariate model alongside other factors, but as a standalone predictor it carries no useful pricing signal in this portfolio.
+**Interpretation:** Vehicle performance, measured by power-to-weight ratio, shows no meaningful relationship with claim frequency across any of the three brand tiers. The relationship is flat in all panels. This means adding vehicle performance as a pricing factor would increase model complexity without improving the accuracy of risk differentiation. The variable may contribute in a multivariate model alongside other factors, but as a standalone predictor it carries no useful pricing signal in this portfolio.
 
 ------------------------------------------------------------------------
 
@@ -1678,10 +2315,15 @@ repair_data <- insurance_viz |>
   filter(n() >= 200) |>
   ungroup()
 
+# --- Sort by widest 99% interval (most variable) to narrowest ---
 brand_order <- repair_data |>
   group_by(vehicle_brand) |>
-  summarise(med = median(repair_intensity, na.rm = TRUE)) |>
-  arrange(med) |>
+  summarise(
+    q_lower = quantile(repair_intensity, 0.005, na.rm = TRUE),
+    q_upper = quantile(repair_intensity, 0.995, na.rm = TRUE),
+    ci_width = q_upper - q_lower
+  ) |>
+  arrange(ci_width) |>
   pull(vehicle_brand)
 
 repair_data |>
@@ -1705,7 +2347,7 @@ repair_data |>
   coord_flip() +
   labs(
     title    = "Repair Cost Intensity by Vehicle Brand",
-    subtitle = "Index = claim severity / vehicle value; brands with ≥200 claimant policies",
+    subtitle = "Sorted by 99% interval width (widest at top); brands with ≥200 claimant policies",
     x        = "Vehicle Brand",
     y        = "Repair Cost Intensity\n(Severity / Declared Value)"
   )
@@ -1728,10 +2370,15 @@ repair_data <- insurance_viz |>
   filter(n() >= 200) |>
   ungroup()
 
+# --- Sort by widest 99% interval (most variable) to narrowest ---
 brand_order <- repair_data |>
   group_by(vehicle_brand) |>
-  summarise(med = median(repair_intensity, na.rm = TRUE)) |>
-  arrange(med) |>
+  summarise(
+    q_lower = quantile(repair_intensity, 0.005, na.rm = TRUE),
+    q_upper = quantile(repair_intensity, 0.995, na.rm = TRUE),
+    ci_width = q_upper - q_lower
+  ) |>
+  arrange(ci_width) |>
   pull(vehicle_brand)
 
 repair_data |>
@@ -1755,14 +2402,14 @@ repair_data |>
   coord_flip() +
   labs(
     title    = "Repair Cost Intensity by Vehicle Brand",
-    subtitle = "Index = claim severity / vehicle value; brands with ≥200 claimant policies",
+    subtitle = "Sorted by 99% interval width (widest at top); brands with ≥200 claimant policies",
     x        = "Vehicle Brand",
     y        = "Repair Cost Intensity\n(Severity / Declared Value)"
   )
 ```
 :::
 
-**Interpretation:** Brands with high repair cost intensity and narrow confidence intervals (data-rich) represent confirmed pricing blind spots: their premiums are calibrated to low declared values but their actual repair costs are disproportionately high. Older luxury brands that have depreciated significantly in declared value while retaining expensive parts and specialist labour requirements are the typical culprits. Brands whose entire 99% CI sits above 0.5 are systematically generating repair costs that consume more than half of the declared vehicle value per incident – a clear signal for a brand-specific severity surcharge.
+**Interpretation:** Budget and mass-market brands (Dacia, Daewoo, Suzuki, Chevrolet, Fiat, Hyundai) rank highest on repair cost intensity: their median repair cost per claim consumes a larger proportion of the vehicle's declared value than any other brands. The medians for all brands cluster tightly near 0.02–0.05, meaning the typical claim costs 2–5% of declared value regardless of brand. The separation between brands is driven by the spread of individual claims, not the central tendency: budget brands show 99% intervals (orange) extending to 0.3–0.5, meaning the most expensive individual claims from these brands approach 30–50% of the vehicle's declared value. Luxury brands (Audi, Mercedes, BMW, Volvo, Landrover) sit at the bottom of the ranking with the narrowest intervals. It is possible that their high declared values absorb even expensive absolute repair costs into a low intensity ratio. Note that severity values are capped at the 99th percentile, which compresses the upper tails — the true 99% intervals for budget brands would extend further on uncapped data. For the underwriter, **brand-specific severity loadings should target the budget end of the portfolio** where the gap between declared value and actual repair exposure is widest. These are the brands where a single claim can consume a disproportionate share of the asset's insured value.
 
 ------------------------------------------------------------------------
 
@@ -1876,12 +2523,15 @@ ggplot(serial_data,
 
 glass_data <- insurance_viz |>
   filter(total_exposure > 0, claim_frequency < 8) |>
-  mutate(glass_claimer_label = if_else(had_glass_claim,
-                                       "Filed glass claim",
-                                       "No glass claim"))
+  mutate(
+    glass_claimer_label = if_else(had_glass_claim,
+                                  "Filed glass claim",
+                                  "No glass claim"),
+    non_glass_freq = (total_claims - glass_claims) / total_exposure
+  )
 
 ggplot(glass_data,
-       aes(x      = claim_frequency,
+       aes(x      = non_glass_freq,
            fill   = glass_claimer_label,
            colour = glass_claimer_label)) +
   geom_density(alpha = 0.35, linewidth = 0.9) +
@@ -1898,9 +2548,9 @@ ggplot(glass_data,
   scale_x_continuous(limits = c(0, 5),
                      labels = number_format(accuracy = 0.1)) +
   labs(
-    title    = "Claim Frequency: Glass Claimers vs Non-Claimers",
-    subtitle = "Does a glass claim signal broader future claims activity?",
-    x        = "Claim Frequency (claims per policy year)",
+    title    = "Non-Glass Claim Frequency: Glass Claimers vs Non-Claimers",
+    subtitle = "Glass claims excluded from frequency count; tests co-occurrence of other claim types",
+    x        = "Non-Glass Claim Frequency (claims per policy year)",
     y        = "Density"
   ) +
   theme(legend.position = "top")
@@ -1917,12 +2567,15 @@ ggplot(glass_data,
 
 glass_data <- insurance_viz |>
   filter(total_exposure > 0, claim_frequency < 8) |>
-  mutate(glass_claimer_label = if_else(had_glass_claim,
-                                       "Filed glass claim",
-                                       "No glass claim"))
+  mutate(
+    glass_claimer_label = if_else(had_glass_claim,
+                                  "Filed glass claim",
+                                  "No glass claim"),
+    non_glass_freq = (total_claims - glass_claims) / total_exposure
+  )
 
 ggplot(glass_data,
-       aes(x      = claim_frequency,
+       aes(x      = non_glass_freq,
            fill   = glass_claimer_label,
            colour = glass_claimer_label)) +
   geom_density(alpha = 0.35, linewidth = 0.9) +
@@ -1939,16 +2592,16 @@ ggplot(glass_data,
   scale_x_continuous(limits = c(0, 5),
                      labels = number_format(accuracy = 0.1)) +
   labs(
-    title    = "Claim Frequency: Glass Claimers vs Non-Claimers",
-    subtitle = "Does a glass claim signal broader future claims activity?",
-    x        = "Claim Frequency (claims per policy year)",
+    title    = "Non-Glass Claim Frequency: Glass Claimers vs Non-Claimers",
+    subtitle = "Glass claims excluded from frequency count; tests co-occurrence of other claim types",
+    x        = "Non-Glass Claim Frequency (claims per policy year)",
     y        = "Density"
   ) +
   theme(legend.position = "top")
 ```
 :::
 
-**Interpretation:** The density chart provides strong visual evidence for the "gateway drug" hypothesis. The non-claimer curve (blue) peaks sharply at zero claim frequency and falls away quickly – the vast majority of non-glass-claimers make no further claims. In stark contrast, the glass-claimer density curve (red) is bimodal: it has its primary mass around 1.0 claims per policy year and a secondary mode near 2.0, with a longer right tail extending beyond 3.0. This means policyholders who filed a glass claim in the same policy year **are concentrated at claim frequencies of 1–2 events**, not at zero. The red curve barely touches zero, confirming that glass claimers overwhelmingly have at least one other claim type in the same period. This confirms that glass claims in this portfolio do not occur in isolation — policyholders who filed a glass claim in a given year almost always had at least one other claim in the same period. This pattern is strong enough to support treating glass claim history as a meaningful indicator of overall claims activity at renewal, even if the glass claim itself is excluded from the formal claims history score. Whether this justifies a formal loading or a flag for closer underwriting review is a commercial decision, but the data pattern clearly supports giving glass claim history more weight than it typically receives.
+**Interpretation:** The density chart excludes glass claims from the frequency count, isolating whether glass claimers file other claim types in the same policy year. The non-claimer curve (blue) peaks sharply at zero and falls away quickly — the expected pattern for a predominantly claim-free portfolio. The glass-claimer curve (red) also peaks near zero, but with a noticeably lower and broader peak, and carries more density in the 0.5–2.0 range than the non-claimer curve. A secondary mode around 1.0 is still visible, indicating a subset of glass claimers who also file at least one other claim type. This meant that glass claims do not universally co-occur with other claim types — a meaningful share of glass claimers file only the glass claim and nothing else. However, glass claimers are still substantially more likely to have non-glass claims than the general population: the red curve's heavier right tail and reduced zero-peak confirm that the co-occurrence rate is elevated, even if not near-universal. For the underwriter, glass claim history remains a useful signal of broader claims activity, but as a probabilistic indicator rather than a near-certain predictor. It is better suited as a flag for closer underwriting review at renewal than as a basis for a formal pricing loading on its own.
 
 ------------------------------------------------------------------------
 
@@ -1961,32 +2614,220 @@ ggplot(glass_data,
 
 ```{r}
 #| echo: false
-#| label: fig-nb-vs-portfolio
-#| fig-cap: "Loss ratio comparison: new business vs portfolio. ggbetweenstats automates the Wilcoxon test and reports effect size. The break-even reference line is added as a ggplot component."
-#| fig-width: 8
-#| fig-height: 6
+#| label: fig-nb-profitability
+#| fig-cap: "Profitability composition by business type."
+#| fig-width: 11
+#| fig-height: 5
 
-ggbetweenstats(
-  data                 = insurance_viz |>
-    filter(loss_ratio_capped > 0, total_exposure > 0),
-  x                    = business_type,
-  y                    = loss_ratio_capped,
-  type                 = "nonparametric",
-  pairwise.comparisons = FALSE,
-  title                = "Loss Ratio: New Business vs Portfolio",
-  subtitle             = "Wilcoxon test; does the NB channel carry higher inherent risk?",
-  xlab                 = "Business Type",
-  ylab                 = "Loss Ratio",
-  ggtheme              = theme_minimal(base_size = 11),
-  ggplot.component     = list(
-    geom_hline(yintercept = 1, linetype = "dashed",
-               colour = "grey50", linewidth = 0.7),
-    theme(
-      plot.title    = element_text(face = "bold", hjust = 0.5),
-      plot.subtitle = element_text(hjust = 0.5, colour = "grey40")
-    )
+# --- Panel A: Interactive profitability stacked bar ---
+nb_profit <- insurance_viz |>
+  filter(total_exposure > 0, !is.na(loss_ratio), !is.na(business_type)) |>
+  mutate(
+    profit_status = case_when(
+      total_claims == 0  ~ "No claims (LR = 0)",
+      loss_ratio <= 1    ~ "Profitable (0 < LR ≤ 1)",
+      TRUE               ~ "Loss-making (LR > 1)"
+    ),
+    profit_status = factor(profit_status,
+      levels = c("Loss-making (LR > 1)",
+                 "Profitable (0 < LR ≤ 1)",
+                 "No claims (LR = 0)"),
+      ordered = TRUE)
   )
+
+nb_summary <- nb_profit |>
+  count(business_type, profit_status) |>
+  group_by(business_type) |>
+  mutate(
+    pct     = n / sum(n) * 100,
+    n_total = sum(n)
+  ) |>
+  ungroup() |>
+  mutate(
+    tooltip_text = paste0(
+      profit_status, "\n",
+      comma(n), " policies (", round(pct, 1), "%)\n",
+      "Total: ", comma(n_total))
+  )
+
+chi_nb <- chisq.test(
+  table(nb_profit$business_type, nb_profit$profit_status)
 )
+chi_nb_sub <- paste0(
+  "Pearson χ² = ", round(chi_nb$statistic, 1),
+  ", df = ", chi_nb$parameter,
+  ", p ", ifelse(chi_nb$p.value < 0.001, "< 0.001",
+                 paste0("= ", round(chi_nb$p.value, 4)))
+)
+
+p_nb_bar <- ggplot(nb_summary,
+       aes(x = business_type, y = pct, fill = profit_status,
+           text = tooltip_text)) +
+  geom_col(position = "stack", width = 0.5,
+           colour = "white", linewidth = 0.3) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("No claims (LR = 0)"       = "#5C9E6E",
+               "Profitable (0 < LR ≤ 1)"  = "#F0C27F",
+               "Loss-making (LR > 1)"     = "#C0392B"),
+    name = "Profitability Status"
+  ) +
+  labs(
+    title    = "Profitability: New Business vs Portfolio",
+    subtitle = chi_nb_sub,
+    x        = "Business Type",
+    y        = "Proportion (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 9),
+    legend.position = "bottom"
+  )
+
+ggplotly(p_nb_bar, tooltip = "text") |>
+  layout(
+    hoverlabel = list(bgcolor = "white", font = list(size = 12)),
+    legend = list(orientation = "h", x = 0.5,
+                  xanchor = "center", y = -0.15)
+  )
+```
+
+## Code
+
+```{r}
+#| eval: false
+#| label: fig-nb-profitability-code
+#| fig-cap: "Profitability composition by business type."
+#| fig-width: 11
+#| fig-height: 5
+
+# --- Panel A: Interactive profitability stacked bar ---
+nb_profit <- insurance_viz |>
+  filter(total_exposure > 0, !is.na(loss_ratio), !is.na(business_type)) |>
+  mutate(
+    profit_status = case_when(
+      total_claims == 0  ~ "No claims (LR = 0)",
+      loss_ratio <= 1    ~ "Profitable (0 < LR ≤ 1)",
+      TRUE               ~ "Loss-making (LR > 1)"
+    ),
+    profit_status = factor(profit_status,
+      levels = c("Loss-making (LR > 1)",
+                 "Profitable (0 < LR ≤ 1)",
+                 "No claims (LR = 0)"),
+      ordered = TRUE)
+  )
+
+nb_summary <- nb_profit |>
+  count(business_type, profit_status) |>
+  group_by(business_type) |>
+  mutate(
+    pct     = n / sum(n) * 100,
+    n_total = sum(n)
+  ) |>
+  ungroup() |>
+  mutate(
+    tooltip_text = paste0(
+      profit_status, "\n",
+      comma(n), " policies (", round(pct, 1), "%)\n",
+      "Total: ", comma(n_total))
+  )
+
+chi_nb <- chisq.test(
+  table(nb_profit$business_type, nb_profit$profit_status)
+)
+chi_nb_sub <- paste0(
+  "Pearson χ² = ", round(chi_nb$statistic, 1),
+  ", df = ", chi_nb$parameter,
+  ", p ", ifelse(chi_nb$p.value < 0.001, "< 0.001",
+                 paste0("= ", round(chi_nb$p.value, 4)))
+)
+
+p_nb_bar <- ggplot(nb_summary,
+       aes(x = business_type, y = pct, fill = profit_status,
+           text = tooltip_text)) +
+  geom_col(position = "stack", width = 0.5,
+           colour = "white", linewidth = 0.3) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("No claims (LR = 0)"       = "#5C9E6E",
+               "Profitable (0 < LR ≤ 1)"  = "#F0C27F",
+               "Loss-making (LR > 1)"     = "#C0392B"),
+    name = "Profitability Status"
+  ) +
+  labs(
+    title    = "Profitability: New Business vs Portfolio",
+    subtitle = chi_nb_sub,
+    x        = "Business Type",
+    y        = "Proportion (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 9),
+    legend.position = "bottom"
+  )
+
+ggplotly(p_nb_bar, tooltip = "text") |>
+  layout(
+    hoverlabel = list(bgcolor = "white", font = list(size = 12)),
+    legend = list(orientation = "h", x = 0.5,
+                  xanchor = "center", y = -0.15)
+  )
+```
+:::
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: false
+#| label: fig-nb-violin
+#| fig-cap: "Loss ratio distribution among claimants only (LR > 0). Wilcoxon test for group difference."
+#| fig-width: 7
+#| fig-height: 5
+
+# --- Panel B: Violin + boxplot for claimants only ---
+p_nb_violin <- ggplot(
+  insurance_viz |>
+    filter(loss_ratio_capped > 0, total_exposure > 0,
+           !is.na(business_type)),
+  aes(x = business_type, y = loss_ratio_capped, fill = business_type)
+) +
+  geom_violin(alpha = 0.45, trim = TRUE, show.legend = FALSE) +
+  geom_boxplot(width = 0.12, outlier.shape = NA,
+               fill = "white", colour = "grey30",
+               show.legend = FALSE) +
+  stat_compare_means(
+    method      = "wilcox.test",
+    label       = "p.format",
+    label.x     = 1.3,
+    label.y.npc = 0.95
+  ) +
+  geom_hline(yintercept = 1, linetype = "dashed",
+             colour = "grey50", linewidth = 0.7) +
+  annotate("text", x = 0.6, y = 1.04,
+           label = "Break-even (LR = 1)",
+           hjust = 0, size = 3, colour = "grey50") +
+  scale_fill_manual(
+    values = c("New Business" = "#4B8BBE",
+               "Portfolio"    = "#C0392B"),
+    guide  = "none"
+  ) +
+  labs(
+    title    = "Loss Ratio Among Claimants: NB vs Portfolio",
+    subtitle = "Claimants only (LR > 0); Wilcoxon test for group difference",
+    x        = "Business Type",
+    y        = "Loss\nRatio"
+  )
+
+p_nb_violin
 ```
 
 ## Code
@@ -1994,35 +2835,53 @@ ggbetweenstats(
 ```{r}
 #| eval: false
 #| label: fig-nb-vs-portfolio-code
-#| fig-cap: "Loss ratio comparison: new business vs portfolio. ggbetweenstats automates the Wilcoxon test and reports effect size. The break-even reference line is added as a ggplot component."
-#| fig-width: 8
-#| fig-height: 6
+#| fig-cap: "Loss ratio distribution among claimants only (LR > 0). Wilcoxon test for group difference."
+#| fig-width: 7
+#| fig-height: 5
 
-ggbetweenstats(
-  data                 = insurance_viz |>
-    filter(loss_ratio_capped > 0, total_exposure > 0),
-  x                    = business_type,
-  y                    = loss_ratio_capped,
-  type                 = "nonparametric",
-  pairwise.comparisons = FALSE,
-  title                = "Loss Ratio: New Business vs Portfolio",
-  subtitle             = "Wilcoxon test; does the NB channel carry higher inherent risk?",
-  xlab                 = "Business Type",
-  ylab                 = "Loss Ratio",
-  ggtheme              = theme_minimal(base_size = 11),
-  ggplot.component     = list(
-    geom_hline(yintercept = 1, linetype = "dashed",
-               colour = "grey50", linewidth = 0.7),
-    theme(
-      plot.title    = element_text(face = "bold", hjust = 0.5),
-      plot.subtitle = element_text(hjust = 0.5, colour = "grey40")
-    )
+# --- Panel B: Violin + boxplot for claimants only ---
+p_nb_violin <- ggplot(
+  insurance_viz |>
+    filter(loss_ratio_capped > 0, total_exposure > 0,
+           !is.na(business_type)),
+  aes(x = business_type, y = loss_ratio_capped, fill = business_type)
+) +
+  geom_violin(alpha = 0.45, trim = TRUE, show.legend = FALSE) +
+  geom_boxplot(width = 0.12, outlier.shape = NA,
+               fill = "white", colour = "grey30",
+               show.legend = FALSE) +
+  stat_compare_means(
+    method      = "wilcox.test",
+    label       = "p.format",
+    label.x     = 1.3,
+    label.y.npc = 0.95
+  ) +
+  geom_hline(yintercept = 1, linetype = "dashed",
+             colour = "grey50", linewidth = 0.7) +
+  annotate("text", x = 0.6, y = 1.04,
+           label = "Break-even (LR = 1)",
+           hjust = 0, size = 3, colour = "grey50") +
+  scale_fill_manual(
+    values = c("New Business" = "#4B8BBE",
+               "Portfolio"    = "#C0392B"),
+    guide  = "none"
+  ) +
+  labs(
+    title    = "Loss Ratio Among Claimants: NB vs Portfolio",
+    subtitle = "Claimants only (LR > 0); Wilcoxon test for group difference",
+    x        = "Business Type",
+    y        = "Loss\nRatio"
   )
-)
+
+p_nb_violin
 ```
 :::
 
-**Interpretation:** New business policies show a higher typical loss ratio (median \~2.50) than portfolio renewals (median \~2.11), and this difference is both statistically significant and practically meaningful in magnitude. The result supports the view that the acquisition channel introduces a worse risk mix than the renewal book — and that this structural difference is large enough to be relevant for pricing rather than being a minor statistical artefact. This finding is consistent with and reinforces the adverse bonus score composition pattern identified in Section 4.2.
+**Interpretation:** Portfolio-level profitability: New Business policies have a higher claim-free rate (approximately 88%) than Portfolio renewals (approximately 82%), meaning a larger proportion of newly acquired policies generate no claims at all. However, Portfolio renewals show a larger "Profitable (0 \< LR ≤ 1)" band and a larger loss-making segment (LR \> 1) than New Business. This indicates that while fewer New Business policies claim, those that do are more likely to produce losses exceeding the premium collected.
+
+Claimant loss ratio distribution: Among policies that claimed (LR \> 0), New Business claimants show a higher median loss ratio (approximately 2.5) than Portfolio claimants (approximately 2.0), with a wider violin and higher IQR. The Wilcoxon test confirms this difference is statistically significant (p \< 2e-16). New Business claimants also show more density extending beyond LR = 8, indicating heavier tail risk.
+
+**Combined reading:** The two charts together reveal that the New Business channel's risk problem is concentrated in severity rather than frequency. New Business policies are actually less likely to claim than renewals, but when they do claim the losses are larger relative to premium. This is consistent with the adverse bonus score composition identified in Section 4.2 — the acquisition channel absorbs policyholders with worse claims histories whose individual claim events produce higher costs. For pricing, the current premium structure for new business may need a severity loading applied at acquisition, rather than a flat uplift, to account for the heavier tail risk that the renewal book's underwriting filters have already partially screened out.
 
 ------------------------------------------------------------------------
 
@@ -2178,7 +3037,7 @@ insurance_viz |>
 ```
 :::
 
-**Interpretation:** The two charts together confirm the retention paradox with empirical precision. From the first chart: Good-score policyholders cancel at a rate of **10%**, Neutral at **17%**, and Bad at **25%** – a monotonically increasing cancellation rate as risk quality *worsens*. At first glance this seems reassuring (riskier customers leave more). But the second chart reframes this entirely. Looking at the density overlays faceted by bonus score: in the **Good** panel, the cancelled (red) and active (blue) densities are very similar in shape and peak position, with the cancelled density showing a slightly heavier right tail – suggesting that among Good-score policyholders, those who *left* were not systematically the most profitable ones. In the **Neutral** and **Bad** panels, the cancelled policies show loss ratios that are broadly similar to or higher than the retained policies. **The combined picture tells a nuanced story:** the insurer is not clearly losing its best Good-score risks (the retention paradox is partial, not full), but it is also not successfully shedding its worst Bad-score risks at meaningful rates – 75% of Bad-score policyholders *stay*. The highest-risk cohort is the stickiest, likely because they struggle to obtain competitive quotes elsewhere. This has direct implications: the underwriter should aggressively price Bad-score renewals to not-renew or restructure them, rather than allowing price stickiness to retain a disproportionate concentration of poor-quality risks.
+**Interpretation:** The two charts together confirm the retention paradox with empirical precision. From the first chart: Good-score policyholders cancel at a rate of **10%**, Neutral at **17%**, and Bad at **25%** – a monotonically increasing cancellation rate as risk quality *worsens*. At first glance this seems reassuring (riskier customers leave more). But the second chart reframes this entirely. Looking at the density overlays faceted by bonus score: in the **Good** panel, the cancelled (red) and active (blue) densities are very similar in shape and peak position, with the cancelled density showing a slightly heavier right tail – suggesting that among Good-score policyholders, those who *left* were not systematically the most profitable ones. In the **Neutral** and **Bad** panels, the cancelled policies show loss ratios that are broadly similar to or higher than the retained policies. **The combined picture tells a nuanced story:** the insurer is not clearly losing its best Good-score risks (the retention paradox is partial, not full), but it is also not successfully shedding its worst Bad-score risks at a fast enough rate. While Good-score policyholders are technically the "stickiest" cohort (90% retention), a significant majority (75%) of Bad-score policyholders still *stay*, likely because they struggle to obtain competitive quotes elsewhere. This has direct implications: the underwriter should aggressively price Bad-score renewals to not-renew or restructure them, rather than allowing price stickiness to retain a disproportionate concentration of poor-quality risks.
 
 ------------------------------------------------------------------------
 
@@ -2308,9 +3167,185 @@ ggplot(exposure_data,
 
 ## 10 Bivariate Analysis: Geographic Drivers
 
-### 10.1 Loss Ratio by Municipality Type and Circulation Area
+### 10.1 Profitability and Loss Ratio by Municipality Type and Circulation Area
 
 **Technique justification:** `stat_pointinterval()` from **ggdist** with simultaneous 95% and 99% confidence intervals. A boxplot or grouped bar chart of summary medians is explicitly avoided because it conveys false precision for the Islands segment, which has a smaller proportion of total policy count (as confirmed in Section 4.3). `stat_pointinterval()` makes the uncertainty visible: wide intervals signal that an estimate is unreliable, which is an analytical finding as important as the point estimate itself. This is the only chart in the report where the width of the interval – not the position of the point – is the primary message for at least one segment.
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: false
+#| label: fig-profitability-geography
+#| fig-cap: "Profitability by geographic segment."
+#| fig-width: 10
+#| fig-height: 5
+geo_profit <- insurance_viz |>
+  filter(total_exposure > 0, !is.na(loss_ratio),
+         !is.na(municipality_type), !is.na(circulation_area)) |>
+  mutate(
+    geo_segment = paste0(municipality_type, " (", circulation_area, ")"),
+    profit_status = case_when(
+      total_claims == 0  ~ "No claims (LR = 0)",
+      loss_ratio <= 1    ~ "Profitable (0 < LR ≤ 1)",
+      TRUE               ~ "Loss-making (LR > 1)"
+    ),
+    profit_status = factor(profit_status,
+      levels = c("Loss-making (LR > 1)",
+                 "Profitable (0 < LR ≤ 1)",
+                 "No claims (LR = 0)"),
+      ordered = TRUE)
+  )
+
+geo_summary <- geo_profit |>
+  count(geo_segment, profit_status) |>
+  group_by(geo_segment) |>
+  mutate(
+    pct     = n / sum(n) * 100,
+    n_total = sum(n)
+  ) |>
+  ungroup() |>
+  mutate(
+    tooltip_text = paste0(
+      profit_status, "\n",
+      comma(n), " policies (", round(pct, 1), "%)\n",
+      "Total: ", comma(n_total))
+  )
+
+chi_geo <- chisq.test(
+  table(geo_profit$geo_segment, geo_profit$profit_status)
+)
+chi_geo_sub <- paste0(
+  "Pearson χ² = ", round(chi_geo$statistic, 1),
+  ", df = ", chi_geo$parameter,
+  ", p ", ifelse(chi_geo$p.value < 0.001, "< 0.001",
+                 paste0("= ", round(chi_geo$p.value, 4)))
+)
+
+p_geo <- ggplot(geo_summary,
+       aes(x = geo_segment, y = pct, fill = profit_status,
+           text = tooltip_text)) +
+  geom_col(position = "stack", width = 0.6,
+           colour = "white", linewidth = 0.3) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("No claims (LR = 0)"       = "#5C9E6E",
+               "Profitable (0 < LR ≤ 1)"  = "#F0C27F",
+               "Loss-making (LR > 1)"     = "#C0392B"),
+    name = "Profitability Status"
+  ) +
+  labs(
+    title    = "Policy Profitability by Geographic Segment",
+    subtitle = chi_geo_sub,
+    x        = "Geographic Segment",
+    y        = "Proportion (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 9),
+    axis.text.x   = element_text(angle = 20, hjust = 1, size = 9),
+    legend.position = "bottom"
+  )
+
+ggplotly(p_geo, tooltip = "text") |>
+  layout(
+    hoverlabel = list(bgcolor = "white", font = list(size = 12)),
+    legend = list(orientation = "h", x = 0.5,
+                  xanchor = "center", y = -0.2)
+  )
+```
+
+## Code
+
+```{r}
+#| eval: false
+#| label: fig-profitability-geography-code
+#| fig-cap: "Profitability by geographic segment."
+#| fig-width: 10
+#| fig-height: 5
+geo_profit <- insurance_viz |>
+  filter(total_exposure > 0, !is.na(loss_ratio),
+         !is.na(municipality_type), !is.na(circulation_area)) |>
+  mutate(
+    geo_segment = paste0(municipality_type, " (", circulation_area, ")"),
+    profit_status = case_when(
+      total_claims == 0  ~ "No claims (LR = 0)",
+      loss_ratio <= 1    ~ "Profitable (0 < LR ≤ 1)",
+      TRUE               ~ "Loss-making (LR > 1)"
+    ),
+    profit_status = factor(profit_status,
+      levels = c("Loss-making (LR > 1)",
+                 "Profitable (0 < LR ≤ 1)",
+                 "No claims (LR = 0)"),
+      ordered = TRUE)
+  )
+
+geo_summary <- geo_profit |>
+  count(geo_segment, profit_status) |>
+  group_by(geo_segment) |>
+  mutate(
+    pct     = n / sum(n) * 100,
+    n_total = sum(n)
+  ) |>
+  ungroup() |>
+  mutate(
+    tooltip_text = paste0(
+      profit_status, "\n",
+      comma(n), " policies (", round(pct, 1), "%)\n",
+      "Total: ", comma(n_total))
+  )
+
+chi_geo <- chisq.test(
+  table(geo_profit$geo_segment, geo_profit$profit_status)
+)
+chi_geo_sub <- paste0(
+  "Pearson χ² = ", round(chi_geo$statistic, 1),
+  ", df = ", chi_geo$parameter,
+  ", p ", ifelse(chi_geo$p.value < 0.001, "< 0.001",
+                 paste0("= ", round(chi_geo$p.value, 4)))
+)
+
+p_geo <- ggplot(geo_summary,
+       aes(x = geo_segment, y = pct, fill = profit_status,
+           text = tooltip_text)) +
+  geom_col(position = "stack", width = 0.6,
+           colour = "white", linewidth = 0.3) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(
+    values = c("No claims (LR = 0)"       = "#5C9E6E",
+               "Profitable (0 < LR ≤ 1)"  = "#F0C27F",
+               "Loss-making (LR > 1)"     = "#C0392B"),
+    name = "Profitability Status"
+  ) +
+  labs(
+    title    = "Policy Profitability by Geographic Segment",
+    subtitle = chi_geo_sub,
+    x        = "Geographic Segment",
+    y        = "Proportion (%)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, colour = "grey40", size = 9),
+    axis.text.x   = element_text(angle = 20, hjust = 1, size = 9),
+    legend.position = "bottom"
+  )
+
+ggplotly(p_geo, tooltip = "text") |>
+  layout(
+    hoverlabel = list(bgcolor = "white", font = list(size = 12)),
+    legend = list(orientation = "h", x = 0.5,
+                  xanchor = "center", y = -0.2)
+  )
+```
+:::
 
 ::: panel-tabset
 ## Plot
@@ -2345,9 +3380,9 @@ ggplot(geo_data,
   ) +
   geom_hline(yintercept = 1, linetype = "dashed",
              colour = "grey50", linewidth = 0.7) +
-  annotate("text", x = 0.6, y = 1.04,
-           label = "Break-even (LR = 1)",
-           hjust = 0, size = 3, colour = "grey50") +
+annotate("text", x = 0.6, y = 10^(log10(1) + 0.03),
+         label = "Break-even (LR = 1)",
+         hjust = 0, size = 3, colour = "grey50") +
   labs(
     title    = "Loss Ratio by Geographic Segment",
     subtitle = "Ordered by median; log scale reveals full CI width across all segments",
@@ -2389,9 +3424,9 @@ ggplot(geo_data,
   ) +
   geom_hline(yintercept = 1, linetype = "dashed",
              colour = "grey50", linewidth = 0.7) +
-  annotate("text", x = 0.6, y = 1.04,
-           label = "Break-even (LR = 1)",
-           hjust = 0, size = 3, colour = "grey50") +
+annotate("text", x = 0.6, y = 10^(log10(1) + 0.03),
+         label = "Break-even (LR = 1)",
+         hjust = 0, size = 3, colour = "grey50") +
   labs(
     title    = "Loss Ratio by Geographic Segment",
     subtitle = "Ordered by median; log scale reveals full CI width across all segments",
@@ -2402,8 +3437,11 @@ ggplot(geo_data,
 ```
 :::
 
-**Interpretation:** All six geographic segments share similar median loss ratios (approximately 2.0–3.0), with no consistent pattern of urban segments outperforming rural equivalents. Circulation area does not emerge as a meaningful risk discriminator from this chart. All segments carry substantial uncertainty, with 99% confidence intervals extending to approximately 50 on the log scale. Island segments show marginally wider intervals than mainland segments, though the difference is modest.
-For the insurer, this meant that loss ratios are highly variable across all geographic segments — no segment can be priced reliably from the median alone. The insurer should avoid treating observed medians as precise pricing inputs and instead apply uncertainty loadings, particularly for lower-volume segments like islands.
+**Interpretation:** Portfolio-level profitability: All six geographic segments show similar profitability profiles — claim-free rates range from approximately 83–88%, with loss-making proportions broadly comparable across segments. Inland Urban has the lowest claim-free rate (approximately 83%) and the largest loss-making segment, making it marginally the worst-performing geography at the portfolio level. The Island segments do not stand out as materially different from mainland segments in profitability composition.
+
+Claimant loss ratio distribution: Among claimants (LR \> 0), all six segments share similar median loss ratios (approximately 2.0–3.0) with no consistent pattern of urban segments outperforming rural equivalents. Circulation area does not emerge as a meaningful risk discriminator. The 99% intervals extend to approximately 50 on the log scale across all segments — this is not unique to Islands but reflects the high variability of loss ratios among claimants portfolio-wide.
+
+**Combined finding**: Geography - whether measured by municipality type or circulation area - is not a strong risk discriminator in this portfolio. Neither the profitability composition nor the claimant loss ratio distribution shows meaningful differentiation across the six segments. The wide intervals across all segments confirm that loss ratios are inherently variable regardless of location, and no geographic segment can be priced precisely from its observed median alone. The insurer should treat geographic loadings with caution — the data does not support material differentiation between segments, and any geographic pricing variation should be justified by external evidence (e.g. regional repair costs, traffic density) rather than observed medians from this portfolio.
 
 ------------------------------------------------------------------------
 
@@ -2413,33 +3451,59 @@ This section distils the most actionable findings from the visual analytics inve
 
 ### 11.1 Portfolio Profitability: Critical Findings
 
-**Finding 1 – COMP_N carries the most adverse risk profile of all product types.** Comprehensive cover without excess (COMP_N) carries the highest proportion of Bad bonus score policyholders (3.5% vs 1.0%–2.0% for other types) and its median loss ratio sits just above break-even — the combination of adverse selection in its risk intake and a median position above LR = 1 makes it the product type with the most concerning risk-profitability combination. Note that Third-Party shows the highest median loss ratio of all product types, though this reflects its minimal coverage structure. Observed pattern: COMP_N has the highest Bad bonus concentration of all product types and its median loss ratio sits above LR = 1. Third-Party has the highest median loss ratio overall.
+**Finding 1 – Third-Party policies drive severe tail risks, while COMP_N policies suffer from high claim frequency.** Third-Party policies are the most profitable at the portfolio level (approximately 93% claim-free), but exhibit the highest median loss ratio among claimants (approximately LR = 5) and massive variability. Conversely, COMP_N (No Excess) has the lowest claim-free rate (\~70%) and the largest loss-making segment, though individual claims are less extreme relative to premiums collected.
 
-**Finding 2 – Bonus score is associated with significantly different loss ratio distributions, but the direction is counterintuitive.** All three pairwise Wilcoxon tests are statistically significant (p \< 0.0001 for Good vs Neutral and Good vs Bad; p \< 0.01 for Neutral vs Bad). However, Good-score policyholders show the highest median loss ratio (\~2.0) and widest distribution, while Neutral and Bad groups show lower medians (\~1.5) and more compressed distributions. This counterintuitive finding warrants further investigation — the bonus score classification may not be functioning as a simple risk discriminator in this portfolio, or the Good group may systematically include higher-value policies generating larger absolute losses. Observed pattern: the half-eye chart confirms all three groups have statistically different distributions, with Good showing the highest median and widest spread.
+-   **Actionable:** For Third-Party policies, ensure adequate reinsurance or capital reserves to handle catastrophic tail variance. For COMP_N, focus on frequency management by introducing mandatory deductibles to suppress the sheer volume of claiming policies.
+-   **Observed pattern:** Third-Party premiums are low, so when claims occur, they are large relative to what was collected; COMP_N's broader coverage attracts more claims, thinning out the profitable majority.
 
-**Finding 3 – Short-duration policies show systematically worse loss ratio distributions than full-duration policies.** Very short (\<0.35yr) and short (0.35–0.75yr) duration policies show higher median loss ratios and heavier right tails than full-year policies. The pattern is consistent with short-duration policies carrying a higher loss burden relative to the premium collected. The within-year timing of claims and cancellations is not available in this dataset, so claim-then-cancel behaviour remains a hypothesis consistent with the observed pattern rather than a confirmed finding. Observed pattern: the ridgeline chart shows a progressive rightward shift and widening of distributions as exposure duration decreases, consistent and visible across all four bands.
+**Finding 2 – The Bonus Score functions as a frequency discriminator, not a severity discriminator.** Good-score policies have the highest claim-free rate (\~85%), but Good-score claimants show the highest median loss ratio (\~2.5) and widest distribution. Bad-score claimants claim more often but show the lowest median LR (\~1.5) because their premiums are already loaded for higher frequency.
 
-**Finding 4 – New business carries materially worse risk quality than portfolio renewals.** NB policyholders carry 1.6% Bad bonus proportion vs 0.8% for portfolio renewals — a 100% relative excess. The Neutral proportion gap (2.6% vs 1.3%) is similarly large. Observed pattern: the chi-square test confirms new business carries a significantly higher proportion of Bad and Neutral bonus score policyholders than portfolio renewals (p \< 0.001). The magnitude of this difference is visible in the stacked proportion charts.
+-   **Actionable:** Relook at pricing approach in applying the bonus score to frequency models, but use vehicle value or policy type to model severity. Caution against over-correct severity for Bad-score policies or under-reserve for high-cost Good-score claims.
+-   **Observed pattern:** Good claimants are rare but generate large losses (likely holding higher-value policies); Bad claimants are frequent but individual claims are less extreme relative to premium.
+
+**Finding 3 – New Business risks are concentrated in severity, not frequency.** VNew Business policies have a higher claim-free rate (\~88%) than Portfolio renewals (\~82%). However, New Business claimants produce a higher median loss ratio (\~2.5 vs 2.0) with heavier tail risk extending beyond LR = 8.
+
+-   **Actionable:** Consider specific severity loading at acquisition for New Business to account for the heavier tail risk that the renewal book's underwriting filters have already screened out.
+-   **Observed pattern:** The acquisition channel absorbs policyholders whose individual claim events produce higher costs.
+
+**Finding 4 – Short-duration policies carry a systematically worse loss ratio distribution.** Policies held for very short (\<0.35yr) and short (0.35–0.75yr) durations show higher median loss ratios and heavier right tails than full-year (\>0.95yr) policies.
+
+-   **Actionable:** Consider to apply upfront premium loadings or short-rate cancellation penalties to protect against early-term risk and potential "claim-then-cancel" behavior.
+-   **Observed pattern:** The median loss ratio for short-duration policies sits to the right of the full-duration median, confirming they are systematically less profitable.
 
 ### 11.2 Claims Volatility: Key Drivers
 
-**Finding 5 – Glass claims co-occur with broader claims activity in the same policy year.** Policyholders who file glass claims show bimodal claim frequency distributions centred at 1.0 and 2.0 events per year — not near zero like non-glass-claimers. The red density curve barely touches zero, confirming glass claimers overwhelmingly have at least one other claim type in the same period. Observed pattern: the density overlay chart shows glass claimers have a bimodal frequency distribution centred at 1.0 and 2.0 events per year, compared to non-claimers concentrated near zero.
+**Finding 5 – Repair costs do not vary materially with vehicle age; avoid age-based severity loadings.** The severity trend is broadly flat across the 5–50 year vehicle age range (concentrated at €500–€700).
 
-**Finding 6 – Gasoline vehicles show marginally higher median claim severity than diesel vehicles (Wilcoxon p = 0.04).** The chart shows Gasoline's median line sitting slightly above Diesel's on the log scale. Both distributions span a similar range with bulk density concentrated between €300 and €1,000. The Gasoline half-eye extends slightly further rightward above €1,000. The mechanism cannot be determined from this dataset alone. Observed pattern: the Wilcoxon test confirms a statistically significant difference in median claim severity (p = 0.04), with Gasoline showing marginally higher severity than Diesel. The half-eye shapes are similar in form, indicating a location shift rather than a tail effect.
+-   **Actionable:** Caution against using vehicle age alone as a severity predictor; it adds rating complexity without meaningfully improving risk differentiation.
+-   **Observed pattern:** Hexbin density confirms the vast majority of claims concentrate in a flat band regardless of vehicle age.
 
-**Finding 7 – Claim severity does not show a clear systematic relationship with vehicle age across most of the distribution.** The GAM smoother on the hexbin chart is largely flat across the 0–50 year vehicle age range. A marginal upward trend is visible for vehicles aged 50+ years, but confidence intervals at this extreme are wide due to sparse data. The claimed U-shaped pattern (highest for new, declining, then uptick for old) is not clearly supported by the rendered GAM line. Observed pattern: the hexbin density is broadly distributed across vehicle ages 5–50 years without a clear directional trend in the GAM smoother. A marginal late-age uptick is visible but uncertainty is high.
+**Finding 6 – High repair cost intensity identifies pricing blind spots in specific brands.** Certain brands systematically generate repair costs that consume more than half of the declared vehicle value per incident.
+
+-   **Actionable:** Consider applying a brand-specific severity surcharge to these vehicles.
+-   **Observed pattern:** These premiums are calibrated to heavily depreciated declared values, but retain expensive parts and specialist labor requirements.
 
 ### 11.3 Segmentation and Adverse Selection
 
-**Finding 8 – Luxury brand tier carries a statistically confirmed but small adverse selection signal (χ²=281.9, p \< 0.001, small Cramér's V).** Luxury vehicles carry 2.0% Bad bonus proportion vs 1.2%–1.3% for other tiers. The severity 99% CI extends further upward for Luxury than other tiers, suggesting greater variability in extreme claim costs. Whether this warrants a separate brand tier loading requires further multivariate analysis. This dataset identifies the association but cannot determine independent predictive power once other variables are controlled for. Observed pattern: chi-square confirms significant association with small effect size. Severity 99% CI is wider for Luxury, suggesting greater variability in extreme claims.
+**Finding 7 – Young drivers (18-25) are double-exposed; 65+ drivers show no meaningful deterioration.** The 18–25 band has the lowest claim-free rate (\~80%) and the fewest low-loss-ratio claimants. Conversely, the 65+ band is comparable in shape to the 56–65 group, showing no visible deterioration.
 
-**Finding 9 – Power-to-weight ratio shows no detectable association with claim frequency in this portfolio.** GAM smoothers are flat across all brand tiers with near-zero Spearman ρ values. Observed pattern: flat GAM curves and near-zero ρ values across all three brand tiers indicate no detectable association between power-to-weight ratio and claim frequency in this dataset.
+-   **Actionable:** Consider applying age-based pricing loadings to the 18–25 segment. Do not apply age-based surcharges to 65+ drivers without further evidence. Use the 36–55 band as your baseline anchor.
+-   **Observed pattern:** Young drivers claim more often and produce worse outcomes when they do; senior drivers remain stable.
 
-**Finding 10 – Bad-score policyholders are the stickiest cohort: 75% remain active vs 90% of Good-score policies.** The insurer's natural attrition process does not effectively shed its worst risks. 75% of Bad-score policyholders stay, likely because they struggle to obtain competitive alternatives elsewhere. Observed pattern: Bad-score policyholders have a 25% cancellation rate versus 10% for Good-score policyholders. Despite the higher cancellation rate, 75% of Bad-score policyholders remain active, the largest absolute retention of any bonus group.
+**Finding 8 – Young drivers paired with newer vehicles carry distinctively elevated claim rates.** The combination of 18-25 year-olds driving 4–7 year-old vehicles produces the highest mean claim frequency in the portfolio (0.80).
 
-### 11.4 Geographic Risk
+-   **Actionable:** Consider implementing an interaction factor in pricing models specifically for young drivers operating newer vehicles (0-7 years old).
+-   **Observed pattern:** Across middle bands (26-55), newer vehicles also claim more frequently, but the young-driver/new-vehicle interaction is uniquely extreme.
 
-**Finding 11 – Urban policies show higher loss ratios than rural; island segment estimates are statistically unreliable.** All six geographic segments show median loss ratios approximately between 2.0-3.0. Circulation area does not emerge as a meaningful risk discriminator from this chart. The more critical finding is the contrast in confidence interval widths. Island segments show dramatically wider intervals than inland and coastal segments, reflecting smaller policy volumes in those areas. For island segments, the wide confidence intervals mean the observed median cannot be treated as a reliable pricing input: the true loss ratio could be materially higher. The insurer should apply an explicit uncertainty loading for island policies rather than pricing purely off the observed median.
+**Finding 9 – Luxury vehicles are worse on both frequency and severity dimensions.** Luxury vehicles have the highest claim rate (17.5% vs 12.8% for Budget) and their 99% CI extends further, indicating disproportionately costly extreme claims.
+
+-   **Actionable:** Consider to relook at potential for frequency loading to Luxury policies to reflect higher claim rates, plus a separate severity tail loading to reserve for catastrophic exposures.
+-   **Observed pattern:** Reverses the "prestige paradox"; luxury drivers claim more often and carry heavier tail risk.
+
+**Finding 10 – Natural attrition retains 75% of your worst risks (The Retention Paradox).** While Bad-score policies cancel at the highest rate (25%), 75% remain active. Furthermore, departing Good-score customers do not systematically represent the most profitable ones.
+
+-   **Actionable:** Consider relook at pricing for Bad-score renewals to actively restructure coverage or force non-renewal. Do not rely on natural attrition to clean the portfolio.
+-   **Observed pattern:** Poor-quality risks are highly sticky because they struggle to find competitive alternatives elsewhere.
 
 ------------------------------------------------------------------------
 

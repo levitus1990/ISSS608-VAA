@@ -150,24 +150,20 @@ Ang Ming Kwan
 <div class="column" style="width:55%;">
 <div style="font-size:0.82em; line-height:1.3;">
 <p>A visual analytics investigation of <strong>354,140 motor insurance policies</strong> from a Spanish non-life insurer (2022–2024) uncovers structural profitability risks across product, customer, behavioural, and geographic dimensions.</p>
-<p><strong>Four findings stand out for business attention:</strong></p>
-<p>🔴 <strong>Comprehensive cover (no excess)</strong> attracts three times more poor-risk drivers than basic third-party cover — its pricing may not reflect the risk it is absorbing</p>
-<p>🔴 <strong>Poor claims history policyholders are the stickiest</strong> — 75% remain active year after year, making them the hardest-to-shed risk concentration in the portfolio</p>
-<p>🟠 <strong>Short-duration policies consistently generate higher losses</strong> relative to the premium collected — a pattern consistent with claims being filed shortly before policies are cancelled</p>
-<p>🟠 <strong>Policyholders who file glass claims almost always have other claims too</strong> — glass claim history is a reliable early warning signal of broader claims activity</p>
-</div>
-<div style="font-size:0.82em; margin-top:4px; padding:4px 10px; background:#fef9e7; border-left:3px solid #e67e22; border-radius:3px;">
-<p>Further patterns: newly acquired customers carry twice the adverse risk of renewals · urban policies generate higher losses than rural</p>
+<p><strong>10 findings stand out for business attention:</strong></p>
+<p>🔴 <strong>Third-Party policies drive severe tail risks, while COMP_N policies suffer from high claim frequency</strong></p>
+<p>🔴 <strong>The Bonus Score functions as a frequency discriminator, not a severity discriminator</strong></p>
+<p>🔴 <strong>New Business risks are concentrated in severity, not frequency.</strong>&nbsp;</p>
+<p>🔴 <strong>Short-duration policies carry a systematically worse loss ratio distribution</strong></p>
+<p>🔴 <strong>Repair costs do not vary materially with vehicle age; avoid age-based severity loadings</strong></p>
 </div>
 </div><div class="column" style="width:45%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/exec-summary-chart-1.png" width="480"></p>
-</figure>
-</div>
-</div>
+<div style="font-size:0.82em; line-height:1.3;">
+<p>🔴 <strong>High repair cost intensity identifies pricing blind spots in specific brands</strong></p>
+<p>🔴 <strong>Young drivers (18-25) are double-exposed; 65+ drivers show no meaningful deterioration</strong></p>
+<p>🔴 <strong>Young drivers paired with newer vehicles carry distinctively elevated claim rates.</strong></p>
+<p>🔴 <strong>Luxury vehicles are worse on both frequency and severity dimensions.</strong></p>
+<p>🔴 <strong>Natural attrition retains 75% of your worst risks.</strong></p>
 </div>
 </div></div>
 </section>
@@ -185,6 +181,7 @@ Ang Ming Kwan
 <li><a href="Take-home_Ex01.html#univariate-analysis">All univariate analyses →</a></li>
 <li><a href="Take-home_Ex01.html#bivariate-analysis-conventional-drivers">All bivariate analyses →</a></li>
 </ul>
+<p>Refer to details here: <a href="https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#data-wrangling">link</a></p>
 <p><strong>Key data preparation steps</strong></p>
 <ul>
 <li>Zero duplicates confirmed; four variables had minor missing data (under 0.5% each)</li>
@@ -228,295 +225,280 @@ Ang Ming Kwan
 </div>
 </div></div>
 </section>
-<section id="slide-3a-univariate-bonus-score-by-policy-type" class="slide level2">
-<h2>Slide 3a | Univariate: Bonus Score by Policy Type</h2>
-
-<img data-src="images/BonusScore_PolicyType.png" style="width:100.0%" class="r-stretch"><div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>What this tells the business:</strong> Comprehensive cover without excess (COMP_N) carries 3.5% Bad-score policyholders — nearly three times the rate of basic third-party cover. Higher-risk drivers are disproportionately self-selecting into the most protective product, which raises questions about whether its current premiums reflect the risk being absorbed.</p>
-</div>
-</section>
-<section id="slide-3b-univariate-bonus-score-by-business-type" class="slide level2">
-<h2>Slide 3b | Univariate: Bonus Score by Business Type</h2>
-
-<img data-src="images/BonusScore_NewBvPort.png" style="width:100.0%" class="r-stretch"><div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>What this tells the business:</strong> Newly acquired customers carry twice the proportion of poor claims history drivers compared to existing portfolio renewals (1.6% Bad vs 0.8%). The acquisition channel absorbs materially worse risk before renewal underwriting filters can apply — a structural gap that the current pricing may not fully account for.</p>
-</div>
-</section>
-<section id="slide-4-univariate-geographic-vehicle-distributions" class="slide level2">
-<h2>Slide 4 | Univariate: Geographic &amp; Vehicle Distributions</h2>
-<div class="columns">
-<div class="column" style="width:34%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide7-geo-1.png" width="326"></p>
-</figure>
-</div>
-</div>
-</div>
-</div><div class="column" style="width:66%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide7-vehicle-dist-1.png" width="595"></p>
-</figure>
-</div>
-</div>
-</div>
-</div></div>
-<div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>What this tells the business:</strong> The island segment, comprising around 24,000 policies, shows much wider uncertainty bands in the loss ratio analysis (Slide 11) than other segments, reflecting greater variability in loss outcomes within that segment. Further analyses for pricing in respect of Island drivers might be warranted to account for the higher variability. Most insured vehicles are 20–25 years old on average, and the typical vehicle is worth approximately €24,700.</p>
-</div>
-</section>
-<section id="slide-5-univariate-driver-age-distribution" class="slide level2">
-<h2>Slide 5 | Univariate: Driver Age Distribution</h2>
-<div class="columns">
-<div class="column" style="width:56%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide8-driver-age-1.png" width="537"></p>
-</figure>
-</div>
-</div>
-</div>
-</div><div class="column" style="width:44%;">
-<div style="font-size:0.80em; line-height:1.35;">
-<p>The portfolio peaks between <strong>38-42 years</strong> with a median of <strong>48</strong>, and is concentrated in the <strong>30-60 band</strong>. The distribution is moderately right-skewed, rising steeply from age 20 and tapering gradually through the 70s.</p>
-<p><strong>Young risk zone (under 25):</strong> Histogram bars are sparse and short, confirming this group is a minor fraction of total policies. Prior research associates this segment with elevated claim rates due to limited experience and higher risk-taking behaviour (Meng et al., 2022; ABI, 2009).</p>
-<p><strong>Senior risk zone (over 65):</strong> Unlike the sharp drop on the left, the right tail declines gradually. Bars at 65–75 remain visible before tapering toward 90. Prior research links increased crash risk beyond 65 to declining physical capacity (Cappelletti, 2023).</p>
-<p><strong>What this tells the business:</strong> The portfolio is dominated by middle-aged drivers (30–60 years) — the lowest-risk group. Very young and older drivers are present but thin in volume. Because they represent such a small share of policies, their higher-risk characteristics do not show up clearly in portfolio-wide statistics. Their risk differences are visible when examining each age group’s loss pattern directly in Slide 12.</p>
-</div>
-</div></div>
-</section>
-<section id="slide-6-univariate-summary-of-findings" class="slide level2">
-<h2>Slide 6 | Univariate: Summary of Findings</h2>
-<div class="columns">
-<div class="column" style="width:95%;">
-<div style="font-size:0.95em;">
-<table class="caption-top">
-<colgroup>
-<col style="width: 33%">
-<col style="width: 33%">
-<col style="width: 33%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Variable</th>
-<th style="text-align: left;">Pattern</th>
-<th style="text-align: left;">Implication</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;"><strong>Policy type</strong></td>
-<td style="text-align: left;">COMP_N: 3.5% Bad; TP: 1.6%</td>
-<td style="text-align: left;">Adverse selection in comp. cover</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Business type</strong></td>
-<td style="text-align: left;">NB: 1.6% Bad vs 0.8% Portfolio</td>
-<td style="text-align: left;">Acquisition absorbs worse risk</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Municipality</strong></td>
-<td style="text-align: left;">Islands: high loss variability</td>
-<td style="text-align: left;">Wide uncertainty bands — treat observed loss ratio as a range, not a fixed figure</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Vehicle age</strong></td>
-<td style="text-align: left;">Mode 20–25 yrs; right-skewed</td>
-<td style="text-align: left;">Non-linear severity at both extremes</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Vehicle value</strong></td>
-<td style="text-align: left;">Log-normal; median €24,700</td>
-<td style="text-align: left;">Log-scale severity loadings required</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Driver age</strong></td>
-<td style="text-align: left;">35–60 dominated; thin extremes</td>
-<td style="text-align: left;">Age distribution limits detectability of risk differences at extremes</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div style="font-size:0.90em; margin-top:6px; padding:5px 10px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>Key business insights from univariate analyses:</strong> An older vehicle fleet + middle-aged driver base means demographic extremes are bypassed. Risk concentration is instead occurring in the <strong>product and acquisition channel dimensions</strong> (COMP_N adverse selection, NB vs Portfolio gap).</p>
-</div>
-</div></div>
-</section>
-<section id="slide-7-bivariate-loss-ratio-policy-type-bonus-score" class="slide level2">
-<h2>Slide 7 | Bivariate: Loss Ratio — Policy Type &amp; Bonus Score</h2>
-<div class="columns">
-<div class="column" style="width:50%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide10-lr-policy-1.png" width="480"></p>
-</figure>
-</div>
-</div>
-</div>
-</div><div class="column" style="width:50%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide10-lr-bonus-1.png" width="480"></p>
-</figure>
-</div>
-</div>
-</div>
-</div></div>
-<div style="font-size:0.75em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>What this tells the business:</strong> Third-party policies produce the highest typical losses of all product types. COMP_N sits just above break-even on average — its profitability is marginal. Importantly, policyholders with a “Good” claims history classification generate higher typical losses than “Neutral” or “Bad” classified policyholders. This counterintuitive pattern may indicate that Good-score policies tend to cover higher-value vehicles generating larger claim costs, or that the claims history scoring system needs recalibration — either way, it warrants investigation before the score is used as a pricing input.</p>
-</div>
-</section>
-<section id="slide-8-bivariate-claim-severity-fuel-type-vehicle-age" class="slide level2">
-<h2>Slide 8 | Bivariate: Claim Severity — Fuel Type &amp; Vehicle Age</h2>
-<div class="columns">
-<div class="column" style="width:42%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide11-sev-fuel-1.png" width="403"></p>
-</figure>
-</div>
-</div>
-</div>
-</div><div class="column" style="width:58%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide11-sev-vage-1.png" width="537"></p>
-</figure>
-</div>
-</div>
-</div>
-</div></div>
-<div style="font-size:0.8em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>What this tells the business:</strong> Gasoline vehicles <strong>show marginally higher median claim severity</strong> than diesel vehicles (Wilcoxon p = 0.04). Both fuel types share similar distribution shapes, indicating a minor location shift rather than a difference in extreme tail events. Vehicle age <strong>shows no clear systematic relationship with claim severity</strong>. The GAM smoother remains largely flat across 0–50 years, lacking the expected U-shaped pattern. A marginal uptick for vehicles aged 50+ carries high uncertainty due to sparse data.</p>
-</div>
-</section>
-<section id="slide-9-bivariate-demographic-drivers" class="slide level2">
-<h2>Slide 9 | Bivariate: Demographic Drivers</h2>
-<div class="columns">
-<div class="column" style="width:54%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide12-ridge-age-1.png" width="518"></p>
-</figure>
-</div>
-</div>
-</div>
-</div><div class="column" style="width:46%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide12-heatmap-1.png" width="422"></p>
-</figure>
-</div>
-</div>
-</div>
-</div></div>
-<div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#eaf4fc; border-left:3px solid #2980b9; border-radius:3px;">
-<p><strong>What this tells the business:</strong> Young drivers (18–25) produce the widest and most unpredictable loss outcomes — they are hard to price accurately. Middle-aged drivers (36–55) are the most stable and profitable group. The strongest single signal in the heatmap is young drivers paired with moderately aged vehicles (4–7 years) — this combination produces the highest claim rate in the entire portfolio at 0.80 claims per policy year. Across all middle-age groups, claim frequency is consistently higher for newer vehicles and falls as vehicle age increases, converging to a stable level for vehicles over 25 years old.</p>
-</div>
-</section>
-<section id="slide-10-bivariate-brand-status-behavioural-drivers" class="slide level2">
-<h2>Slide 10 | Bivariate: Brand, Status &amp; Behavioural Drivers</h2>
-<div class="columns">
-<div class="column" style="width:46%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide13-brand-panels-1.png" width="441"></p>
-</figure>
-</div>
-</div>
-</div>
-</div><div class="column" style="width:54%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide13-glass-1.png" width="499"></p>
-</figure>
-</div>
-</div>
-</div>
-</div></div>
-<div style="font-size:0.91em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>What this tells the business:</strong> Luxury vehicle owners carry a slightly higher proportion of poor claims histories than other vehicle tiers (2.0% vs ~1.2%), though the absolute difference is small. More importantly, when luxury vehicles do generate extreme claim costs, those costs are more severe than other tiers — suggesting luxury vehicles warrant closer attention in large-loss reserving rather than routine premium loading. Separately, glass claims almost never occur in isolation: policyholders who filed a glass claim in the same year consistently had 1–2 other claims as well. Glass claim history is a reliable indicator of broader claims activity and should be treated as a renewal risk signal.</p>
-</div>
-</section>
-<section id="slide-11-bivariate-loyalty-geographic-drivers" class="slide level2">
-<h2>Slide 11 | Bivariate: Loyalty &amp; Geographic Drivers</h2>
-<div class="columns">
-<div class="column" style="width:35%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide14-cancel-1.png" width="326"></p>
-</figure>
-</div>
-</div>
-</div>
-</div><div class="column" style="width:65%;">
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure>
-<p><img data-src="Take-home_Ex01_slides_files/figure-revealjs/slide14-geo-ci-1.png" width="595"></p>
-</figure>
-</div>
-</div>
-</div>
-</div></div>
-<div style="font-size:0.75em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
-<p><strong>What this tells the business:</strong> <strong>Bad-score policyholders are the stickiest cohort</strong>. While they cancel more (25% vs.&nbsp;10% for Good), <strong>75% remain active</strong>, representing the largest absolute risk retention because they likely lack external options.</p>
-<p>On geography, median loss ratios are similar across urban and rural segments within each municipality type. This chart alone does not confirm circulation area as a meaningful risk discriminator, and a formal statistical test would be needed before treating it as a rating factor. Island segments present a more pressing concern: their confidence intervals are dramatically wider than mainland segments, meaning the observed median is an unreliable pricing input. The insurer should apply an explicit uncertainty loading for island policies rather than pricing off the median alone.</p>
-</div>
-</section>
-<section id="slide-12-conclusion-reflection" class="slide level2">
-<h2>Slide 12 | Conclusion &amp; Reflection</h2>
+<section id="slide-3-analysis-of-profitability-and-loss-ratio-by-policy-type" class="slide level2">
+<h2>Slide 3 | Analysis of Profitability and Loss Ratio by Policy Type</h2>
 <div class="columns">
 <div class="column" style="width:52%;">
-<div style="font-size:0.90em; line-height:1.35;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide3_PolicyType_Profitability.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:48%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide3_PolicyType_LossRatio.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+<div style="font-size:0.8em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Finding 1 – Third-Party policies drive severe tail risks, while COMP_N policies suffer from high claim frequency.</strong> Third-Party policies are the most profitable at the portfolio level (approximately 93% claim-free), but exhibit the highest median loss ratio among claimants (approximately LR = 5) and massive variability. Conversely, COMP_N (No Excess) has the lowest claim-free rate (~70%) and the largest loss-making segment, though individual claims are less extreme relative to premiums collected.</p>
+<ul>
+<li><p>Actionable: For Third-Party policies, ensure adequate reinsurance or capital reserves to handle catastrophic tail variance. For COMP_N, focus on frequency management by introducing mandatory deductibles to suppress the sheer volume of claiming policies.</p></li>
+<li><p>Observed pattern: Third-Party premiums are low, so when claims occur, they are large relative to what was collected; COMP_N’s broader coverage attracts more claims, thinning out the profitable majority.</p></li>
+</ul>
+<p>Refer to more details here:link</p>
+</div>
+</section>
+<section id="slide-4-analysis-of-profitability-and-loss-ratio-by-bonus-score" class="slide level2">
+<h2>Slide 4 | Analysis of Profitability and Loss Ratio by Bonus Score</h2>
+<div class="columns">
+<div class="column" style="width:52%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide4_BonusScore_Profitability.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:48%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide4_BonusScore_LossRatio.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+<div style="font-size:0.8em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Finding 2 – The Bonus Score functions as a frequency discriminator, not a severity discriminator.</strong> Good-score policies have the highest claim-free rate (~85%), but Good-score claimants show the highest median loss ratio (~2.5) and widest distribution. Bad-score claimants claim more often but show the lowest median LR (~1.5) because their premiums are already loaded for higher frequency.</p>
+<ul>
+<li><p>Actionable: Relook at pricing approach in applying the bonus score to frequency models, but use vehicle value or policy type to model severity. Caution against over-correct severity for Bad-score policies or under-reserve for high-cost Good-score claims.</p></li>
+<li><p>Observed pattern: Good claimants are rare but generate large losses (likely holding higher-value policies); Bad claimants are frequent but individual claims are less extreme relative to premium.</p></li>
+</ul>
+<p>Refer to more details here:link</p>
+</div>
+</section>
+<section id="slide-5-analysis-of-profitability-and-loss-ratio-by-type-of-business" class="slide level2">
+<h2>Slide 5 | Analysis of Profitability and Loss Ratio by Type of Business</h2>
+<div class="columns">
+<div class="column" style="width:52%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide5_BusinessType_Profitability.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:48%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide5_BusinessType_LossRatio.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+<div style="font-size:0.8em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Finding 3 – New Business risks are concentrated in severity, not frequency.</strong> New Business policies have a higher claim-free rate (~88%) than Portfolio renewals (~82%). However, New Business claimants produce a higher median loss ratio (~2.5 vs 2.0) with heavier tail risk extending beyond LR = 8.</p>
+<ul>
+<li><p>Actionable: Consider specific severity loading at acquisition for New Business to account for the heavier tail risk that the renewal book’s underwriting filters have already screened out.</p></li>
+<li><p>Observed pattern: The acquisition channel absorbs policyholders whose individual claim events produce higher costs.</p></li>
+</ul>
+<p>Refer to more details here:link</p>
+</div>
+</section>
+<section id="slide-6-analysis-of-profitability-and-loss-ratio-by-policy-duration" class="slide level2">
+<h2>Slide 6 | Analysis of Profitability and Loss Ratio by Policy Duration</h2>
+
+<img data-src="images/Slide6_DurationExposure.png" class="quarto-figure quarto-figure-center r-stretch" style="width:85.0%"><div style="font-size:0.7em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Finding 4 – Short-duration policies carry a systematically worse loss ratio distribution.</strong> Policies held for very short (&lt;0.35yr) and short (0.35–0.75yr) durations show higher median loss ratios and heavier right tails than full-year (&gt;0.95yr) policies.</p>
+<ul>
+<li><p>Actionable: Consider to apply upfront premium loadings or short-rate cancellation penalties to protect against early-term risk and potential “claim-then-cancel” behavior.</p></li>
+<li><p>Observed pattern: The median loss ratio for short-duration policies sits to the right of the full-duration median, confirming they are systematically less profitable.</p></li>
+</ul>
+<p>Refer to details here: link</p>
+</div>
+</section>
+<section id="slide-7-analysis-of-repair-cost-against-vehicle-age" class="slide level2">
+<h2>Slide 7 | Analysis of Repair Cost Against Vehicle Age</h2>
+<div class="columns">
+<div class="column" style="width:52%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide7_VehicleAgeDist.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:48%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide7_VehicleAge.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+<div style="font-size:0.8em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Finding 5 – Repair costs do not vary materially with vehicle age; avoid age-based severity loadings.</strong> The severity trend is broadly flat across the 5–50 year vehicle age range (concentrated at €500–€700).</p>
+<ul>
+<li><p>Actionable: Caution against using vehicle age alone as a severity predictor; it adds rating complexity without meaningfully improving risk differentiation.</p></li>
+<li><p>Observed pattern: The distribution is right-skewed with a mode around 20–25 years. The long tail of very old vehicles (&gt;40 years) represents a small segment likely insured under basic third-party cover where comprehensive replacement value is not relevant. Hexbin density confirms the vast majority of claims concentrate in a flat band regardless of vehicle age.</p></li>
+</ul>
+<p>Refer to details here: link</p>
+</div>
+</section>
+<section id="slide-8-analysis-of-repair-cost-intensity-against-car-brand" class="slide level2">
+<h2>Slide 8 | Analysis of Repair Cost Intensity Against Car Brand</h2>
+
+<img data-src="images/Slide8_RepairCostInt.png" class="quarto-figure quarto-figure-center r-stretch" style="width:85.0%"><div style="font-size:0.7em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Finding 6 – High repair cost intensity identifies pricing blind spots in specific brands.</strong> Certain brands systematically generate repair costs that consume more than half of the declared vehicle value per incident.</p>
+<ul>
+<li><p>Actionable: Consider applying a brand-specific severity surcharge to these vehicles.</p></li>
+<li><p>Observed pattern: These premiums are calibrated to heavily depreciated declared values, but retain expensive parts and specialist labor requirements.</p></li>
+</ul>
+<p>Refer to details here: link</p>
+</div>
+</section>
+<section id="slide-9-analysis-of-profitability-and-loss-ratio-by-age-bands" class="slide level2">
+<h2>Slide 9 | Analysis of Profitability and Loss Ratio by Age Bands</h2>
+<div class="columns">
+<div class="column" style="width:52%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide9_ProfitabilityDistAge.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:48%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide9_LRDistAge.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+<div style="font-size:0.8em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Finding 7 – Young drivers (18-25) are double-exposed; 65+ drivers show no meaningful deterioration.</strong> The 18–25 band has the lowest claim-free rate (~80%) and the fewest low-loss-ratio claimants. Conversely, the 65+ band is comparable in shape to the 56–65 group, showing no visible deterioration.</p>
+<ul>
+<li><p>Actionable: Consider applying age-based pricing loadings to the 18–25 segment. Do not apply age-based surcharges to 65+ drivers without further evidence. Use the 36–55 band as your baseline anchor.</p></li>
+<li><p>Observed pattern: Young drivers claim more often and produce worse outcomes when they do; senior drivers remain stable.</p></li>
+</ul>
+<p>Refer to details here: link</p>
+</div>
+</section>
+<section id="slide-10-cross-analysis-of-claim-frequency-against-age-and-vehicle-age" class="slide level2">
+<h2>Slide 10 | Cross Analysis of Claim Frequency Against Age and Vehicle Age</h2>
+
+<img data-src="images/Slide10_VehAgeAge.png" class="quarto-figure quarto-figure-center r-stretch" style="width:85.0%"><div style="font-size:0.7em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Finding 8 – Young drivers paired with newer vehicles carry distinctively elevated claim rates.</strong> The combination of 18-25 year-olds driving 4–7 year-old vehicles produces the highest mean claim frequency in the portfolio (0.80).</p>
+<ul>
+<li><p>Actionable: Consider implementing an interaction factor in pricing models specifically for young drivers operating newer vehicles (0-7 years old).</p></li>
+<li><p>Observed pattern: Across middle bands (26-55), newer vehicles also claim more frequently, but the young-driver/new-vehicle interaction is uniquely extreme.</p></li>
+</ul>
+<p>Refer to details here: link</p>
+</div>
+</section>
+<section id="slide-11-analysis-of-claim-frequency-and-severity-by-brand" class="slide level2">
+<h2>Slide 11 | Analysis of Claim Frequency and Severity by Brand</h2>
+
+<img data-src="images/Slide11_Brand.png" class="quarto-figure quarto-figure-center r-stretch" style="width:85.0%"><div style="font-size:0.7em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Finding 9 – Luxury vehicles are worse on both frequency and severity dimensions.</strong> Luxury vehicles have the highest claim rate (17.5% vs 12.8% for Budget) and their 99% CI extends further, indicating disproportionately costly extreme claims.</p>
+<ul>
+<li><p>Actionable: Consider to relook at potential for frequency loading to Luxury policies to reflect higher claim rates, plus a separate severity tail loading to reserve for catastrophic exposures.</p></li>
+<li><p>Observed pattern: Reverses the “prestige paradox”; luxury drivers claim more often and carry heavier tail risk.</p></li>
+</ul>
+<p>Refer to details here: link</p>
+</div>
+</section>
+<section id="slide-12-analysis-of-cancellation-rates-and-comparison-of-active-vs-cancelled-loss-ratios" class="slide level2">
+<h2>Slide 12 | Analysis of Cancellation Rates and Comparison of Active vs Cancelled Loss Ratios</h2>
+<div class="columns">
+<div class="column" style="width:52%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide12_cancellationBonus.png" style="width:85.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:48%;">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="images/Slide12_cancellationLR.png" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+<div style="font-size:0.75em; margin-top:4px; padding:5px 12px; background:#fef9e7; border-left:3px solid #c0392b; border-radius:3px;">
+<p><strong>Finding 10 – Natural attrition retains 75% of your worst risks. </strong> While Bad-score policies cancel at the highest rate (25%), 75% remain active. Furthermore, departing Good-score customers do not systematically represent the most profitable ones.</p>
+<ul>
+<li><p>Actionable: Consider relook at pricing for Bad-score renewals to actively restructure coverage or force non-renewal. Do not rely on natural attrition to clean the portfolio.</p></li>
+<li><p>Observed pattern: Poor-quality risks are highly sticky because they struggle to find competitive alternatives elsewhere.</p></li>
+</ul>
+<p>Refer to details here: link</p>
+</div>
+</section>
+<section id="slide-13-conclusion-reflection" class="slide level2">
+<h2>Slide 13 | Conclusion &amp; Reflection</h2>
+<div class="columns">
+<div class="column" style="width:52%;">
+<div style="font-size:0.8em; line-height:1.35;">
 <p><strong>What this exercise demonstrates</strong></p>
 <p>Visual analytics combined with statistical rigour, provides structured, evidence-based insights. Distributional visualisation, non-parametric testing, and explicit uncertainty quantification reveal patterns that summary statistics alone miss.</p>
-<p><strong>The role of the data analyst</strong></p>
-<p>A data analyst <strong>surfaces patterns and quantifies associations; they do not make business decisions.</strong> Translating findings into business strategies requires actuarial judgement, regulatory context, and commercial considerations beyond analytical scope.</p>
-<p><strong>Crucially: correlation ≠ causation</strong> e.g., glass claimers showing higher claim frequencies describes a <em>pattern</em> but it does not establish that glass claims <em>cause</em> subsequent claims. Establishing causality requires controlled study designs that cross-sectional analysis cannot provide.</p>
-<p><strong>Limitations</strong></p>
+<p><strong>Data Limitations</strong></p>
 <ul>
 <li><p><code>years_licensed</code> mis-specified; re-derivation needed</p></li>
 <li><p>Cross-sectional data; no causal inference</p></li>
 </ul>
-</div>
-</div><div class="column" style="width:48%;">
-<div style="font-size:0.90em; line-height:1.35;">
 <p><strong>Further work required</strong></p>
 <p>🔬 Re-derive <code>years_licensed</code> as genuine experience years and retest as risk predictor</p>
-<p>🔬 Investigate counterintuitive results for higher loss ratios for ‘Good’ bonus score drivers</p>
-<p>🔬 Temporal loss ratio trend analysis across 2022–2024 to detect deteriorating segments</p>
-<p>🔬 Apply credibility weighting to thin-data cells before pricing decisions</p>
-<p>📊 Enrich with geospatial data to model risk at postcode level</p>
-<p>📊 Link multi-year records to confirm glass claim predictive value in Year 2</p>
-<p>⚙️ Validate all findings with claims and pricing teams before rating engine changes</p>
-<p>⚙️ Investigate third_party policy pricing adequacy — it shows the highest loss ratio.</p>
+<p>🔬 For Third-Party policies, ensure adequate reinsurance or capital reserves to handle catastrophic tail variance. For COMP_N, focus on frequency management by potentially introducing mandatory deductibles to suppress the sheer volume of claiming policies.</p>
+<p>🔬 Relook at pricing approach in applying the bonus score to frequency models, but use vehicle value or policy type to model severity. Caution against over-correct severity for Bad-score policies or under-reserve for high-cost Good-score claims.</p>
+</div>
+</div><div class="column" style="width:48%;">
+<div style="font-size:0.8em; line-height:1.35;">
+<p><strong>Further work required</strong></p>
+<p>🔬 Consider specific severity loading at acquisition for New Business to account for the heavier tail risk that the renewal book’s underwriting filters have already screened out.</p>
+<p>🔬 Consider to apply upfront premium loadings or short-rate cancellation penalties to protect against early-term risk and potential “claim-then-cancel” behavior.</p>
+<p>🔬 Caution against using vehicle age alone as a severity predictor; it adds rating complexity without meaningfully improving risk differentiation.</p>
+<p>🔬 Consider applying a brand-specific severity surcharge to these vehicles.</p>
+<p>🔬 Consider applying age-based pricing loadings to the 18–25 segment.</p>
+<p>🔬 Consider implementing an interaction factor in pricing models specifically for young drivers operating newer vehicles (0-7 years old).</p>
+<p>🔬 Consider relooking at potential for frequency loading to Luxury policies to reflect higher claim rates, plus a separate severity tail loading to reserve for catastrophic exposures.</p>
+<p>🔬 Consider relook at pricing for Bad-score renewals to actively restructure coverage or force non-renewal. Do not rely on natural attrition to clean the portfolio.</p>
 </div>
 </div></div>
 
