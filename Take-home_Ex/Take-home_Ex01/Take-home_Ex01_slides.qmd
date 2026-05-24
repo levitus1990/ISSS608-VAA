@@ -572,7 +572,7 @@ Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_
 
 ::::::: columns
 :::: {.column width="52%"}
-::: {style="font-size:0.8em; line-height:1.35;"}
+::: {style="font-size:0.75em; line-height:1.35;"}
 **What this exercise demonstrates**
 
 Visual analytics combined with statistical rigour, provides structured, evidence-based insights. Distributional visualisation, non-parametric testing, and explicit uncertainty quantification reveal patterns that summary statistics alone miss.
@@ -595,7 +595,7 @@ Visual analytics combined with statistical rigour, provides structured, evidence
 ::::
 
 :::: {.column width="48%"}
-::: {style="font-size:0.8em; line-height:1.35;"}
+::: {style="font-size:0.75em; line-height:1.35;"}
 **Further work required**
 
 🔬 Consider specific severity loading at acquisition for New Business to account for the heavier tail risk that the renewal book’s underwriting filters have already screened out.
