@@ -284,7 +284,7 @@ knitr::include_graphics("images/Slide3_PolicyType_LossRatio.png")
 
 -   Observed pattern: Third-Party premiums are low, so when claims occur, they are large relative to what was collected; COMP_N’s broader coverage attracts more claims, thinning out the profitable majority.
 
-Refer to more details here:link
+Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#profitability-and-loss-ratio-by-policy-type)
 
 :::
 
@@ -320,7 +320,7 @@ knitr::include_graphics("images/Slide4_BonusScore_LossRatio.png")
 
 -   Observed pattern: Good claimants are rare but generate large losses (likely holding higher-value policies); Bad claimants are frequent but individual claims are less extreme relative to premium.
 
-Refer to more details here:link
+Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#profitability-and-loss-ratio-by-bonus-score)
 
 :::
 
@@ -356,7 +356,8 @@ knitr::include_graphics("images/Slide5_BusinessType_LossRatio.png")
 
 -   Observed pattern: The acquisition channel absorbs policyholders whose individual claim events produce higher costs.
 
-Refer to more details here:link
+Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#new-business-vs-portfolio-who-is-the-worse-risk-and-why)
+
 :::
 
 ------------------------------------------------------------------------
@@ -378,7 +379,8 @@ knitr::include_graphics("images/Slide6_DurationExposure.png")
 
 -   Observed pattern: The median loss ratio for short-duration policies sits to the right of the full-duration median, confirming they are systematically less profitable.
 
-Refer to details here: link
+Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#exposure-duration-as-a-hidden-quality-signal)
+
 :::
 
 ------------------------------------------------------------------------
@@ -415,7 +417,7 @@ knitr::include_graphics("images/Slide7_VehicleAge.png")
 
 -   Observed pattern: The distribution is right-skewed with a mode around 20–25 years. The long tail of very old vehicles (>40 years) represents a small segment likely insured under basic third-party cover where comprehensive replacement value is not relevant. Hexbin density confirms the vast majority of claims concentrate in a flat band regardless of vehicle age.
 
-Refer to details here: link
+Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#claim-severity-by-vehicle-age)
 
 :::
 
@@ -439,7 +441,7 @@ knitr::include_graphics("images/Slide8_RepairCostInt.png")
 
 -   Observed pattern: These premiums are calibrated to heavily depreciated declared values, but retain expensive parts and specialist labor requirements.
 
-Refer to details here: link
+Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#which-brands-are-most-expensive-to-repair-relative-to-declared-value)
 
 ::: 
 
@@ -476,7 +478,7 @@ knitr::include_graphics("images/Slide9_LRDistAge.png")
 
 -   Observed pattern: Young drivers claim more often and produce worse outcomes when they do; senior drivers remain stable.
 
-Refer to details here: link
+Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#profitability-and-loss-ratio-distributions-across-driver-age-bands)
 
 :::
 
@@ -499,7 +501,7 @@ knitr::include_graphics("images/Slide10_VehAgeAge.png")
 
 -   Observed pattern: Across middle bands (26-55), newer vehicles also claim more frequently, but the young-driver/new-vehicle interaction is uniquely extreme.
 
-Refer to details here: link
+Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#older-driver-young-car-interaction)
 
 :::
 
@@ -523,7 +525,7 @@ knitr::include_graphics("images/Slide11_Brand.png")
 
 -   Observed pattern: Reverses the "prestige paradox"; luxury drivers claim more often and carry heavier tail risk.
 
-Refer to details here: link
+Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#do-prestige-brand-drivers-make-fewer-claims-or-just-different-ones)
 
 :::
 
@@ -560,7 +562,7 @@ knitr::include_graphics("images/Slide12_cancellationLR.png")
 
 -   Observed pattern: Poor-quality risks are highly sticky because they struggle to find competitive alternatives elsewhere.
 
-Refer to details here: link
+Refer to more details here:[link](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex01/Take-home_Ex01#do-profitable-customers-cancel-more-often)
 
 :::
 
