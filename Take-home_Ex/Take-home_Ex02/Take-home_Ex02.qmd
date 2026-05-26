@@ -1,5 +1,1218 @@
 ---
-title: "Take-home_Ex02"
-format: html
-draft: true
+title: "Take-Home Exercise 2 - MC1: TenantThread Embargo Breach Visual Analysis"
+author: "Ang Ming Kwan"
+date: "May 26, 2026"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: false
 ---
+
+## Take-Home Exercise 2 - MC1: TenantThread Embargo Breach Visual Analysis
+
+------------------------------------------------------------------------
+
+![](image/Insider_Trading.png){fig-align="center"}
+
+# Background
+
+This assignment is to dig into TenantThread’s internal communications from the two weeks leading up to the breach and reconstruct what was going. For more details on the case, refer to link: [here](https://vast-challenge.github.io/2026/MC1.html). The current available information are from AI agents that managed TenantThread’s corporate communications. This includes the messages, internal deliberations, and public post.
+
+The following analyses aim to answer the following questions:
+
+1.  What were the key events and relationships that led up to the inappropriate release? Visualize the sequence of events. Include elements such as:
+
+    a.  Key actions
+
+    b.  Causal relationships
+
+    c.  Decision points and actors involved in those decisions
+
+    d.  Highlight decisions and system elements that were important to the post making it past the embargo enforcement
+
+2.  The evasion of the embargo was a new behavior. Provide visual analytics that discover and illustrate the typical behavior of systems/agents/people involved. How does the behavior that led to the release compare to the prior behaviors?
+
+3.  Were there leading indicators that such a release was possible?
+
+    a.  Are there prior occasions where agent’s actual behaviors differ from their expected behavior? When? Which behaviors were observed?
+
+    b.  Were there other occasions where the agent system exhibited behaviors like those that led to the release? When? Which behaviors were observed?
+
+    c.  Why didn’t the prior occasions result in noticeable action?
+
+# 1 Installing Packages
+
+For the purpose of this assignment, I will be using the following libraries.
+
+```{r}
+# ── packages ──────────────────────────────────────────────────────────────────
+library(jsonlite)
+library(tidyverse)
+library(lubridate)
+library(tidytext)
+library(sentimentr)
+library(ggplot2)
+library(plotly)
+library(visNetwork)
+library(igraph)
+library(zoo)
+library(scales)
+library(patchwork)    # combine ggplot panels
+library(ggrepel)      # non-overlapping labels on plots
+
+# ── reproducibility ────────────────────────────────────────────────────────────
+set.seed(2046)
+
+# ── null-coalescing helper (replaces rlang %||%) ───────────────────────────────
+`%||%` <- function(x, y) if (!is.null(x) && length(x) > 0) x else y
+```
+
+`` %||%` <- function(x, y) if (!is.null(x) && length(x) > 0) x else y `` code defines a custom null-coalescing operator. Since many JSON fields are null, this safely substitutes a default value (e.g. `NA_character_`) without throwing errors, preventing the entire data extraction from failing on a single missing field.
+
+# 2 Loading and Parsing the JSON Data
+
+The data has 23 rounds spanning 2046-05-17 to 2046-06-05, each containing a flat communications list.
+
+```{r}
+raw        <- fromJSON("data/MC1_final_00.json", simplifyDataFrame = FALSE)
+rounds_list <- raw$rounds
+
+# Sanity checks - always document these for reproducibility
+cat("Total rounds     :", length(rounds_list), "\n")
+cat("First round hour :", rounds_list[[1]]$hour, "\n")
+cat("Last round hour  :", rounds_list[[length(rounds_list)]]$hour, "\n")
+cat("Total comms      :", sum(map_int(rounds_list, ~length(.x$communications))), "\n")
+```
+
+The function, `fromJSON()` reads the JSON file and converts it into a nested R list. The `simplifyDataFrame = FALSE` argument is important as it keeps everything as a pure list structure rather than letting jsonlite auto-flatten things, which can silently drop or misalign fields when the nesting is irregular (as it is here, since rounds have varying numbers of communications and participants).
+
+After this step, `rounds_list` is just R's in-memory representation of the 23 rounds. Nothing has been cleaned, reshaped, or analysed yet; it is a direct mirror of the JSON hierarchy.
+
+# 3 Wrangling the data
+
+## 3a Communications data frame
+
+`map_dfr()` iterates over each round, then over each message within that round, binding all results into a single flat data frame. The nested structure mirrors the JSON hierarchy: outer loop = rounds, inner loop = individual messages.
+
+`round_hour = ymd_hms(r$hour)` converts the ISO timestamp string (e.g. "2046-06-05T09:00:00") into a proper R POSIXct datetime object, enabling time-based filtering, sorting, and plotting on a continuous axis.
+
+`channel_type = case_when()` collapses the six specific channels into a binary Internal/Public classification. This derived variable is the analytical backbone for detecting the embargo breach - the core question is when and why messages crossed from internal to public.
+
+```{r}
+# ── 3a. Communications data frame ─────────────────────────────────────────────
+comms_df <- map_dfr(rounds_list, function(r) {
+  map_dfr(r$communications, function(m) {
+    tibble(
+      round_hour    = ymd_hms(r$hour),
+      message_id    = m$message_id    %||% NA_character_,
+      agent_id      = m$agent_id      %||% NA_character_,
+      agent_role    = m$agent_role    %||% NA_character_,
+      agent_label   = m$agent_label   %||% NA_character_,
+      channel       = m$channel       %||% NA_character_,
+      message_type  = m$message_type  %||% NA_character_,
+      message_text  = m$content       %||% NA_character_,
+      responding_to = m$responding_to %||% NA_character_,
+      recipients    = paste(unlist(m$recipients %||% list()), collapse = ","),
+      reacting      = m$internal_state$reacting      %||% NA_character_,
+      rationalizing = m$internal_state$rationalizing %||% NA_character_,
+      deliberating  = m$internal_state$deliberating  %||% NA_character_
+    )
+  })
+}) %>%
+  mutate(
+    round_date   = as_date(round_hour),
+    is_crisis    = round_date == as.Date("2046-06-05"),
+    # Classify channel into internal vs public
+    channel_type = case_when(
+      channel %in% c("comms_huddle", "one_on_one_chat", "side_huddle") ~ "Internal",
+      channel %in% c("official_post", "personal_post", "anonymous_post") ~ "Public",
+      TRUE ~ "Other"
+    )
+  )
+```
+
+## 3b Agents / Declared Actions Data Frame
+
+The raw `declared_action` field stores both the action type and its content in one string (e.g. `"POSTED_ANONYMOUS: \"Clarification on...\""`). These two lines split it into a structured type label and the actual text content, making each independently queryable for grouping and filtering.
+
+One round contains a verbose `MONITORING` entry with trailing narrative text. This normalises all monitoring variants to the single label "`MONITORING`" so the action type column has consistent, groupable categories.
+
+```{r}
+# ── 3b. Participants / declared actions (corrected: parse action type + content)
+agents_df <- map_dfr(rounds_list, function(r) {
+  map_dfr(r$participants, function(p) {
+    da_raw <- p$declared_action %||% NA_character_
+    tibble(
+      round_hour            = ymd_hms(r$hour),
+      agent_id              = p$agent_id,
+      agent_role            = p$agent_role,
+      agent_label           = p$agent_label,
+      declared_action_raw   = da_raw,
+      # Split "POSTED_ANONYMOUS: text" into type and content
+      action_type           = if_else(
+        is.na(da_raw), NA_character_,
+        str_extract(da_raw, "^[A-Z_]+")
+      ),
+      action_content        = if_else(
+        is.na(da_raw), NA_character_,
+        str_remove(da_raw, "^[A-Z_]+:\\s*")
+      ),
+      sentiment_at_turn     = p$agent_round_metadata$sentiment_at_turn     %||% NA_character_,
+      action_classification = p$agent_round_metadata$action_classification %||% NA_character_
+    )
+  })
+}) %>%
+  mutate(
+    round_date = as_date(round_hour),
+    is_crisis  = round_date == as.Date("2046-06-05"),
+    # Normalise MONITORING variants to a single label
+    action_type = str_replace(action_type, "^MONITORING.*", "MONITORING")
+  )
+
+```
+
+## 3c Rounds/ Market Data Frame
+
+The market snapshot stores prices and changes as formatted strings like "`$38.70`" and "`-0.5%`". `parse_number()` strips currency symbols, percent signs, and commas, returning a plain numeric value suitable for plotting on a continuous axis.
+
+```{r}
+# ── 3c. Round-level context + market data ─────────────────────────────────────
+rounds_df <- map_dfr(rounds_list, function(r) {
+  ec <- r$environment_context
+  ms <- ec$market_snapshot %||% list()
+  tibble(
+    round_hour       = ymd_hms(r$hour),
+    event_headline   = ec$event_headline   %||% NA_character_,
+    event_narrative  = ec$event_narrative  %||% NA_character_,
+    stock_price      = ms$stock_price      %||% NA_character_,
+    pct_change       = ms$percent_change   %||% NA_character_,
+    market_sentiment = ms$sentiment        %||% NA_character_,
+    agents_unavailable = paste(unlist(ec$agents_unavailable %||% list()), collapse = ",")
+  )
+}) %>%
+  mutate(
+    round_date  = as_date(round_hour),
+    stock_price_num = parse_number(stock_price),     # "$38.70" → 38.70
+    pct_change_num  = parse_number(pct_change)       # "-0.5%" → -0.5
+  )
+
+```
+
+## 3d Reply Graph Edges
+
+The `responding_to` field holds the `message_id` of the parent message. To build a communication network, you need to know who sent that parent message, not just its ID. The `msg_looku`p table maps each `message_id` back to its `agent_id`, and the join resolves `responding_to → sender agent`, giving you a directed `from → to` edge for every reply. The final filter(!is.na(sender)) drops any orphaned replies where the parent message wasn't found.
+
+```{r}
+# ── 3d. Reply graph edges ──────────────────────────────────────────────────────
+# responding_to links message_id within the same comms_df
+msg_lookup <- comms_df %>% select(message_id, sender = agent_id)
+
+edges_df <- comms_df %>%
+  filter(!is.na(responding_to)) %>%
+  left_join(msg_lookup, by = c("responding_to" = "message_id")) %>%
+  filter(!is.na(sender)) %>%          # drop any unmatched (orphaned replies)
+  select(
+    from       = sender,
+    to         = agent_id,
+    round_hour,
+    round_date,
+    channel,
+    channel_type,
+    is_crisis
+  )
+
+```
+
+## 3e Embargo-Sensitive Communications
+
+`embargo_pattern <- regex( ... )` and `embargo_df <- comms_df %>% filter( ... )` searches across three text fields - the public message content, the agent's internal deliberation, and its rationalisation - because embargo-sensitive content may surface in private reasoning before it appears in public posts. Casting the net across all three fields is essential for detecting leading indicators, not just the breach itself.
+
+```{r}
+
+# ── 3e. Embargo-sensitive communications ──────────────────────────────────────
+embargo_pattern <- regex(
+  "CivicLoom|HarborCrest|merger|acquisition|acquirer|rebrand|Project Harbor",
+  ignore_case = TRUE
+)
+
+embargo_df <- comms_df %>%
+  filter(
+    str_detect(message_text, embargo_pattern) |
+    str_detect(deliberating,  embargo_pattern) |
+    str_detect(rationalizing, embargo_pattern)
+  ) %>%
+  mutate(
+    in_public_channel = channel_type == "Public",
+    pre_embargo_break = round_hour < ymd_hms("2046-06-05 17:00:00")
+  )
+
+# ── Quick verification ─────────────────────────────────────────────────────────
+glimpse(comms_df)
+count(comms_df, channel, channel_type, sort = TRUE)
+count(agents_df, action_type, sort = TRUE)
+count(embargo_df, channel, in_public_channel, sort = TRUE)
+```
+
+# 4 Text Features
+
+## 4.1 Sentiment Scoring on Deliberation Text
+
+`sentiment_by()` computes a sentence-level sentiment score accounting for valence shifters (negations, amplifiers). `map_dbl()` applies it to each deliberation text string individually and returns a numeric vector. This scores the agents' private reasoning, not their public posts, revealing emotional and cognitive states that weren't visible externally.
+
+```{r}
+# Sentiment scoring on deliberation text (internal reasoning)
+deliberation_sentiment <- comms_df %>%
+  filter(!is.na(deliberating)) %>%
+  mutate(sentiment_score = map_dbl(deliberating,
+    ~sentiment_by(.x)$ave_sentiment)) %>%
+  select(message_id, agent_id, agent_label, round_hour, 
+         channel, channel_type, is_crisis, sentiment_score)
+```
+
+## 4.2 Identifying most distinctive words per agent across the full dataset
+
+TF-IDF (Term Frequency–Inverse Document Frequency) identifies words that are distinctive to a specific agent relative to all other agents. `unnest_tokens()` tokenises each message into individual words. `anti_join(stop_words)` removes common words like "the" and "and" that carry no analytical signal. The numeric filter removes bare numbers. `bind_tf_idf()` then scores each word by how uniquely characteristic it is of that agent's vocabulary - useful for characterising each agent's communication style and detecting unusual language.
+
+```{r}
+# TF-IDF: most distinctive words per agent across the full dataset
+agent_tfidf <- comms_df %>%
+  unnest_tokens(word, message_text) %>%
+  anti_join(stop_words, by = "word") %>%
+  filter(!str_detect(word, "^\\d+$")) %>%      # remove pure numbers
+  count(agent_label, word, sort = TRUE) %>%
+  bind_tf_idf(word, agent_label, n) %>%
+  group_by(agent_label) %>%
+  slice_max(tf_idf, n = 10) %>%
+  ungroup()
+```
+
+# 5 Visualisation
+
+## 5.1 Stock Price and Sentiments
+
+Understanding agent behaviour on June 5 requires first establishing the external pressure environment in which those agents were operating. A sustained financial decline creates organisational stress that can override normal compliance behaviour, making it essential context for any breach investigation.
+
+A line chart was selected because stock price is continuous time-series data where the trajectory and rate of change carry more analytical weight than individual data points. The connecting line makes the two-week deterioration immediately legible. Sentiment categories are overlaid as colour-encoded points rather than a separate chart, adding a second dimension without visual clutter.
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+p_stock <- rounds_df %>%
+  filter(
+    !is.na(stock_price_num),
+    stock_price_num < 100          # exclude dirty $180 entry at Jun 5 11AM
+  ) %>%
+  mutate(
+    # Normalise sentiment case for consistent legend
+    market_sentiment = str_to_title(market_sentiment)
+  ) %>%
+  ggplot(aes(x = round_hour, y = stock_price_num)) +
+  geom_line(colour = "#185FA5", linewidth = 0.8, na.rm = TRUE) +
+  geom_point(aes(colour = market_sentiment), size = 3) +
+  geom_vline(xintercept = ymd_hms("2046-06-05 17:00:00"),
+             linetype = "dashed", colour = "red", linewidth = 0.8) +
+  # Move annotation below the line to avoid legend clash
+  annotate("text",
+           x = ymd_hms("2046-06-05 16:30:00"),
+           y = 22,
+           label = "Embargo\nbroken 5PM",
+           hjust = 1, colour = "red", size = 3) +
+  scale_colour_manual(values = c(
+    "Neutral"    = "#888780",
+    "Cautious"   = "#BA7517",
+    "Negative"   = "#EF9F27",
+    "Critical"   = "#E24B4A",
+    "Low"        = "#A32D2D",
+    "Recovering" = "#1D9E75"
+  )) +
+  scale_x_datetime(date_labels = "%b %d", date_breaks = "5 days") +
+  scale_y_continuous(limits = c(15, 42), labels = dollar_format()) +
+  labs(
+    title    = "TTHR share price and market sentiment (May 17 – Jun 5)",
+    subtitle = "Steady decline across two weeks; accelerating sell-off on crisis day",
+    x = NULL, y = "Share price (USD)", colour = "Market sentiment"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "right")
+
+ggplotly(p_stock, tooltip = c("x", "y", "colour"))
+
+```
+
+## Code
+
+```{r}
+#| eval: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+p_stock <- rounds_df %>%
+  filter(
+    !is.na(stock_price_num),
+    stock_price_num < 100          # exclude dirty $180 entry at Jun 5 11AM
+  ) %>%
+  mutate(
+    # Normalise sentiment case for consistent legend
+    market_sentiment = str_to_title(market_sentiment)
+  ) %>%
+  ggplot(aes(x = round_hour, y = stock_price_num)) +
+  geom_line(colour = "#185FA5", linewidth = 0.8, na.rm = TRUE) +
+  geom_point(aes(colour = market_sentiment), size = 3) +
+  geom_vline(xintercept = ymd_hms("2046-06-05 17:00:00"),
+             linetype = "dashed", colour = "red", linewidth = 0.8) +
+  # Move annotation below the line to avoid legend clash
+  annotate("text",
+           x = ymd_hms("2046-06-05 16:30:00"),
+           y = 22,
+           label = "Embargo\nbroken 5PM",
+           hjust = 1, colour = "red", size = 3) +
+  scale_colour_manual(values = c(
+    "Neutral"    = "#888780",
+    "Cautious"   = "#BA7517",
+    "Negative"   = "#EF9F27",
+    "Critical"   = "#E24B4A",
+    "Low"        = "#A32D2D",
+    "Recovering" = "#1D9E75"
+  )) +
+  scale_x_datetime(date_labels = "%b %d", date_breaks = "5 days") +
+  scale_y_continuous(limits = c(15, 42), labels = dollar_format()) +
+  labs(
+    title    = "TTHR share price and market sentiment (May 17 – Jun 5)",
+    subtitle = "Steady decline across two weeks; accelerating sell-off on crisis day",
+    x = NULL, y = "Share price (USD)", colour = "Market sentiment"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "right")
+
+ggplotly(p_stock, tooltip = c("x", "y", "colour"))
+
+```
+:::
+
+::: callout-note
+## Insights (Question 1)
+
+The chart establishes the external pressure context. TTHR's share price declined steadily from \$38.70 on May 17 to \$31.50 by June 4; a 19% erosion over two weeks with sentiment progressively deteriorating from Neutral → Cautious → Negative → Critical. This sustained market pressure is causally significant: it created an organisational urgency that motivated agents to act defensively on June 5 before the embargo lifted. The breach did not happen in a vacuum. It happened under maximum external stress.
+:::
+
+## 5.2 Message volume heatmap: agent × round (baseline behaviour)
+
+Identifying whether the breach was deliberate or systemic requires an empirical baseline of normal operating behaviour, as anomalies are only measurable against an established norm. Without this baseline, any crisis-day pattern could be dismissed as within normal variation.
+
+A heatmap was selected because the analytical task requires simultaneous comparison across two dimensions: (i) agent identity and (ii) time, for 23 rounds and 7 agents. Faceting into baseline and crisis panels on a shared colour scale means any dark crisis-day tile is directly comparable to baseline intensity.
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: FALSE
+#| warning: FALSE
+#| message: FALSE
+# Separate pre-crisis and crisis for side-by-side faceting
+volume_grid <- comms_df %>%
+  mutate(
+    period    = if_else(is_crisis, "Crisis day (Jun 5)", "Baseline (May 17–Jun 4)"),
+    time_label = if_else(
+      is_crisis,
+      format(round_hour, "%H:%M"),   # show hours on crisis day
+      format(round_hour, "%b %d")    # show dates on baseline
+    )
+  ) %>%
+  count(period, time_label, agent_label, round_hour) %>%
+  complete(nesting(period, time_label), agent_label, fill = list(n = 0))
+
+p_heatmap <- ggplot(volume_grid,
+       aes(x = reorder(time_label, round_hour),
+           y = agent_label, fill = n)) +
+  geom_tile(colour = "white", linewidth = 0.4) +
+  facet_wrap(~period, scales = "free_x", nrow = 1) +
+  scale_fill_gradient(low = "#E1F5EE", high = "#04342C",   # deeper dark end
+                      breaks = c(0, 10, 20, 30)) +
+  labs(
+    title    = "Message volume per agent per round",
+    subtitle = "Baseline shows daily rhythm; crisis day (right) reveals surge in Legal and Social-Manager agents",
+    x = NULL, y = NULL, fill = "Messages"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text   = element_text(face = "bold"),
+    panel.spacing = unit(1.5, "lines")
+  )
+
+p_heatmap
+
+```
+
+## Code
+
+```{r}
+#| eval: FALSE
+#| warning: FALSE
+#| message: FALSE
+# Separate pre-crisis and crisis for side-by-side faceting
+volume_grid <- comms_df %>%
+  mutate(
+    period    = if_else(is_crisis, "Crisis day (Jun 5)", "Baseline (May 17–Jun 4)"),
+    time_label = if_else(
+      is_crisis,
+      format(round_hour, "%H:%M"),   # show hours on crisis day
+      format(round_hour, "%b %d")    # show dates on baseline
+    )
+  ) %>%
+  count(period, time_label, agent_label, round_hour) %>%
+  complete(nesting(period, time_label), agent_label, fill = list(n = 0))
+
+p_heatmap <- ggplot(volume_grid,
+       aes(x = reorder(time_label, round_hour),
+           y = agent_label, fill = n)) +
+  geom_tile(colour = "white", linewidth = 0.4) +
+  facet_wrap(~period, scales = "free_x", nrow = 1) +
+  scale_fill_gradient(low = "#E1F5EE", high = "#04342C",   # deeper dark end
+                      breaks = c(0, 10, 20, 30)) +
+  labs(
+    title    = "Message volume per agent per round",
+    subtitle = "Baseline shows daily rhythm; crisis day (right) reveals surge in Legal and Social-Manager agents",
+    x = NULL, y = NULL, fill = "Messages"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text   = element_text(face = "bold"),
+    panel.spacing = unit(1.5, "lines")
+  )
+
+p_heatmap
+```
+:::
+
+::: callout-note
+## Insights (Question 2)
+
+This chart is the clearest baseline-versus-crisis comparison i.e., Question 2. The left panel (baseline) shows a stable, distributed rhythm: Platform-Trust-Agent and Legal-Agent carry the heaviest baseline load (darker tiles on May 21–23), communication is spread across all rounds, and no agent dominates overwhelmingly. The right panel (crisis day) shows a fundamentally different pattern: Legal-Agent and Social-Manager-Agent produce the darkest tiles of the entire dataset at 9AM, 11AM, 12AM, and 16–18:00, while PR-Agent largely goes quiet after 10AM. The **contrast between left and right panels is the visual proof of behavioural deviation** - the crisis day is not an intensification of normal behaviour, it is a qualitatively different operating mode.
+:::
+
+## 5.3 Channel mix: internal vs public, baseline vs crisis day
+
+The embargo breach is fundamentally a question of channel violation i.e., whether agents crossed from internal to public communications with embargoed content, rather than simply a question of message volume. An agent could send hundreds of messages without breaching the embargo if all remain internal. Analysing channel mix operationalises the concept of role-norm violation: each agent has an implicit communication mandate defined by their role, and deviations from that mandate are the mechanism through which the breach occurred.
+
+A proportional stacked bar chart was selected over a count bar because the question concerns behavioural norms: the *share* of public versus internal communications, ensuring high-volume agents do not visually dominate lower-volume ones.
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+channel_mix <- comms_df %>%
+  mutate(period = if_else(is_crisis,
+                          "Crisis day (Jun 5)",
+                          "Baseline (May 17–Jun 4)")) %>%
+  count(period, agent_label, channel_type) %>%
+  # Ensure all agent × period × channel_type combos present
+  complete(period, agent_label, channel_type, fill = list(n = 0)) %>%
+  group_by(period, agent_label) %>%
+  mutate(pct = n / sum(n)) %>%
+  ungroup() %>%
+  # Shorten agent labels for readability
+  mutate(agent_short = str_remove(agent_label, "-Agent"))
+
+p_channel <- ggplot(channel_mix,
+       aes(x = agent_short, y = pct, fill = channel_type)) +
+  geom_col(position = "stack", width = 0.7) +
+  facet_wrap(~period, nrow = 1) +
+  scale_fill_manual(values = c("Internal" = "#B5D4F4", "Public" = "#E24B4A")) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    title    = "Share of public vs internal communications per agent",
+    subtitle = "PR-Intern and Social-Manager show elevated public channel use even at baseline",
+    x = NULL, y = "Share of messages", fill = "Channel type"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 9),
+    strip.text   = element_text(face = "bold"),
+    panel.spacing = unit(1.5, "lines")
+  )
+
+p_channel
+
+```
+
+## Code
+
+```{r}
+#| eval: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+channel_mix <- comms_df %>%
+  mutate(period = if_else(is_crisis,
+                          "Crisis day (Jun 5)",
+                          "Baseline (May 17–Jun 4)")) %>%
+  count(period, agent_label, channel_type) %>%
+  # Ensure all agent × period × channel_type combos present
+  complete(period, agent_label, channel_type, fill = list(n = 0)) %>%
+  group_by(period, agent_label) %>%
+  mutate(pct = n / sum(n)) %>%
+  ungroup() %>%
+  # Shorten agent labels for readability
+  mutate(agent_short = str_remove(agent_label, "-Agent"))
+
+p_channel <- ggplot(channel_mix,
+       aes(x = agent_short, y = pct, fill = channel_type)) +
+  geom_col(position = "stack", width = 0.7) +
+  facet_wrap(~period, nrow = 1) +
+  scale_fill_manual(values = c("Internal" = "#B5D4F4", "Public" = "#E24B4A")) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    title    = "Share of public vs internal communications per agent",
+    subtitle = "PR-Intern and Social-Manager show elevated public channel use even at baseline",
+    x = NULL, y = "Share of messages", fill = "Channel type"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 9),
+    strip.text   = element_text(face = "bold"),
+    panel.spacing = unit(1.5, "lines")
+  )
+
+p_channel
+
+```
+:::
+
+::: callout-note
+## Insights (Question 2 & 3(a) and (b))
+
+This chart reveals the most analytically important baseline finding which is relevant to Question 2. In the baseline period, Legal-Agent has 0% public channel use - all 266 of its baseline messages were internal (comms_huddle, one_on_one_chat, side_huddle). This is entirely consistent with its role as legal counsel: Legal agents are not expected to post publicly. On the crisis day, Legal-Agent's bar shows a small but non-zero red segment - it crossed into public channels for the first time. That crossing represents the most significant role-norm violation in the dataset. By contrast, PR-Intern-Agent's baseline bar already shows \~62% public channel use, meaning its crisis-day public posting was behaviourally consistent with its role - the anomaly was Legal, not PR-Intern.
+:::
+
+::: callout-note
+## Insights (Questions 3c)
+
+This chart also provided insights as to why the prior occasions did not result in action. The chart shows that PR-Intern-Agent's elevated public channel use (\~62%) at baseline was normalised because public posting is genuinely within its role. This normalisation likely reduced the system's overall sensitivity to public channel activity as a warning signal. When Legal-Agent began public posting on June 5, the system had been conditioned to treat some degree of public output as routine, masking the significance of a role-inappropriate agent crossing into public channels for the first time.
+:::
+
+## 5.4 Embargo keyword escalation timeline (the causal sequence)
+
+The legal question of deliberate leak versus systemic breakdown turns on the sequence and attribution of embargo-sensitive events: (i) who knew what, (ii) when they acted, and (iii) whether actions suggest coordination or independent failure. A reconstruction of this chain of events is more evidentially useful than any aggregate summary.
+
+A dot plot was selected because the data is sparse and event-based; the goal is to show *when* specific incidents occurred rather than aggregate volumes. Dual encoding of shape and size - triangles for public posts, circles for internal mentions - ensures public violations remain visually prominent even within a dense field of internal activity.
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+p_embargo <- embargo_df %>%
+  mutate(
+    post_label = case_when(
+      channel == "anonymous_post" ~ "Anonymous post",
+      channel == "official_post"  ~ "Official post",
+      channel == "personal_post"  ~ "Personal post",
+      TRUE                        ~ "Internal mention"
+    ),
+    is_public_mention = channel_type == "Public"
+  ) %>%
+  ggplot(aes(x = round_hour, y = agent_label,
+             colour = post_label,
+             shape  = is_public_mention,
+             size   = is_public_mention)) +
+  geom_point(alpha = 0.85) +
+  # Move breach line to just before 5PM, not on top of the data
+  geom_vline(xintercept = ymd_hms("2046-06-05 16:55:00"),
+             colour = "red", linetype = "dashed", linewidth = 0.8) +
+  annotate("text",
+           x = ymd_hms("2046-06-05 16:50:00"),
+           y = 0.6,
+           label = "5 PM breach",
+           hjust = 1.05, colour = "red", size = 3) +
+  scale_colour_manual(values = c(
+    "Internal mention" = "#888780",
+    "Anonymous post"   = "#E24B4A",
+    "Official post"    = "#D85A30",
+    "Personal post"    = "#BA7517"
+  )) +
+  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 17)) +
+  scale_size_manual(values  = c(`FALSE` = 2.5, `TRUE` = 5)) +
+  # Expand x-axis to show full Jun 5 hourly spread
+  scale_x_datetime(date_breaks = "3 days", date_labels = "%b %d",
+                   expand = expansion(mult = c(0.02, 0.05))) +
+  labs(
+    title    = "Embargo-sensitive content: when and by whom",
+    subtitle = "Internal mentions precede public posts by days - Legal-Agent crosses to public at 9AM Jun 5",
+    x = NULL, y = NULL, colour = "Post type"
+  ) +
+  guides(shape = "none", size = "none") +
+  theme_minimal(base_size = 11)
+
+ggplotly(p_embargo, tooltip = c("x", "y", "colour"))
+
+```
+
+## Code
+
+```{r}
+#| eval: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+p_embargo <- embargo_df %>%
+  mutate(
+    post_label = case_when(
+      channel == "anonymous_post" ~ "Anonymous post",
+      channel == "official_post"  ~ "Official post",
+      channel == "personal_post"  ~ "Personal post",
+      TRUE                        ~ "Internal mention"
+    ),
+    is_public_mention = channel_type == "Public"
+  ) %>%
+  ggplot(aes(x = round_hour, y = agent_label,
+             colour = post_label,
+             shape  = is_public_mention,
+             size   = is_public_mention)) +
+  geom_point(alpha = 0.85) +
+  # Move breach line to just before 5PM, not on top of the data
+  geom_vline(xintercept = ymd_hms("2046-06-05 16:55:00"),
+             colour = "red", linetype = "dashed", linewidth = 0.8) +
+  annotate("text",
+           x = ymd_hms("2046-06-05 16:50:00"),
+           y = 0.6,
+           label = "5 PM breach",
+           hjust = 1.05, colour = "red", size = 3) +
+  scale_colour_manual(values = c(
+    "Internal mention" = "#888780",
+    "Anonymous post"   = "#E24B4A",
+    "Official post"    = "#D85A30",
+    "Personal post"    = "#BA7517"
+  )) +
+  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 17)) +
+  scale_size_manual(values  = c(`FALSE` = 2.5, `TRUE` = 5)) +
+  # Expand x-axis to show full Jun 5 hourly spread
+  scale_x_datetime(date_breaks = "3 days", date_labels = "%b %d",
+                   expand = expansion(mult = c(0.02, 0.05))) +
+  labs(
+    title    = "Embargo-sensitive content: when and by whom",
+    subtitle = "Internal mentions precede public posts by days - Legal-Agent crosses to public at 9AM Jun 5",
+    x = NULL, y = NULL, colour = "Post type"
+  ) +
+  guides(shape = "none", size = "none") +
+  theme_minimal(base_size = 11)
+
+ggplotly(p_embargo, tooltip = c("x", "y", "colour"))
+
+```
+:::
+
+::: callout-note
+## Insights (Question 1)
+
+This chart provides the most direct answers to Question 1, i.e., key events, relationships and causal sequence leading to the breach. Reading it left to right reveals the causal sequence:
+
+-   **May 17–May 24:** Only Legal-Agent and Platform-Trust-Agent show internal mentions of embargo-sensitive content (small grey circles). These are appropriate - both roles legitimately handle merger-related information internally.
+-   **May 28–Jun 3:** The cluster of grey circles on Legal-Agent's row thickens. Legal is increasingly deliberating about embargo-sensitive content internally across multiple rounds, while all other agents remain silent on the topic. This is the accumulation phase. Legal-Agent is the single point of information concentration.
+-   **June 5, pre-5PM:** The critical decision point. Large coloured triangles appear simultaneously on Legal-Agent (red - anonymous post), PR-Intern-Agent (red/orange - official post on Flex), and Social-Manager-Agent (amber - personal post). Crucially, these public posts all occur before the dashed 5PM embargo line. Legal-Agent made the first move to public channels; PR-Intern and Social-Manager followed rapidly. The causal pathway is: Legal-Agent breaks containment → PR-Intern amplifies officially → Social-Manager amplifies personally.
+:::
+
+::: callout-note
+## Insights (Question 2, 3(a) and (b))
+
+This chart also addresses Question 3 (leading indicators) directly. The grey circles on Legal-Agent's row from May 17, May 28, May 29, May 30, and June 3 represent internal deliberations containing embargo-sensitive content (CivicLoom, HarborCrest, merger keywords) on five separate occasions before the crisis day. Each of these was a near-miss. Embargo content was active in the agent's reasoning but remained contained within internal channels. The pattern shows a gradual increase in frequency: one mention in May 17, a gap, then four mentions in the final week of May and early June as the embargo deadline approached. The escalating frequency is itself a leading indicator that the topic was becoming increasingly difficult to contain.
+
+Platform-Trust-Agent also shows two early grey circles (May 17 and May 21). This indicates that the agent was the only other one besides Legal to process embargo content in the baseline period, consistent with its VP-level access but notable as an additional containment risk that went unaddressed.
+:::
+
+## 5.5 Declared action type heatmap (behaviour deviation)
+
+Declared actions represent the only explicit, agent-attributed record of intent in the dataset; the closest analogue to a formal decision log. Analysing their chronological sequence on the crisis day serves two investigative purposes: establishing when each agent first violated compliance boundaries, and determining whether the enforcement mechanism was structurally capable of preventing the breach.
+
+A categorical tile heatmap was selected because declared action is a nominal variable requiring distinct colour categories rather than a continuous scale. Using discrete hour labels as the x-axis gives each round an equal-width tile, preventing the merging that occurs with continuous datetime axes.
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+p_actions <- agents_df %>%
+  filter(!is.na(action_type), is_crisis) %>%
+  # Convert to HH:MM factor so each round gets equal tile width
+  mutate(hour_label = format(round_hour, "%H:%M"),
+         hour_label = factor(hour_label, levels = unique(format(
+           sort(unique(round_hour)), "%H:%M")))) %>%
+  count(hour_label, agent_label, action_type) %>%
+  ggplot(aes(x = hour_label, y = agent_label, fill = action_type)) +
+  geom_tile(colour = "white", linewidth = 0.5) +
+  scale_fill_manual(values = c(
+    "MONITORING"         = "#D3D1C7",
+    "POSTED_ANONYMOUS"   = "#E24B4A",
+    "POSTED_ON_FLEX"     = "#D85A30",
+    "POSTED_PERSONAL"    = "#BA7517",
+    "COMPLIANCE_WARNING" = "#534AB7"
+  )) +
+  labs(
+    title    = "Declared actions per agent per round (crisis day only)",
+    subtitle = "Legal-Agent posts anonymously from 9AM; Judge-Agent compliance warning arrives at 3PM - too late",
+    x = "Hour (Jun 5)", y = NULL, fill = "Action type"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p_actions
+
+```
+
+## Code
+
+```{r}
+#| eval: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+p_actions <- agents_df %>%
+  filter(!is.na(action_type), is_crisis) %>%
+  # Convert to HH:MM factor so each round gets equal tile width
+  mutate(hour_label = format(round_hour, "%H:%M"),
+         hour_label = factor(hour_label, levels = unique(format(
+           sort(unique(round_hour)), "%H:%M")))) %>%
+  count(hour_label, agent_label, action_type) %>%
+  ggplot(aes(x = hour_label, y = agent_label, fill = action_type)) +
+  geom_tile(colour = "white", linewidth = 0.5) +
+  scale_fill_manual(values = c(
+    "MONITORING"         = "#D3D1C7",
+    "POSTED_ANONYMOUS"   = "#E24B4A",
+    "POSTED_ON_FLEX"     = "#D85A30",
+    "POSTED_PERSONAL"    = "#BA7517",
+    "COMPLIANCE_WARNING" = "#534AB7"
+  )) +
+  labs(
+    title    = "Declared actions per agent per round (crisis day only)",
+    subtitle = "Legal-Agent posts anonymously from 9AM; Judge-Agent compliance warning arrives at 3PM - too late",
+    x = "Hour (Jun 5)", y = NULL, fill = "Action type"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p_actions
+
+```
+:::
+
+::: callout-note
+## Insights (Question 1)
+
+This chart pinpoints the decision actors and timing with precision which is relevant for Question 1; the chain of key events. At 9:00 AM, Legal-Agent declared `POSTED_ANONYMOUS` and PR-Intern-Agent declared `POSTED_ON_FLEX`. both posting embargo-adjacent content eight hours before the permitted time. The system's compliance mechanism, Judge-Agent, did not issue its `COMPLIANCE_WARNING` until 3:00 PM, six hours after the first breach actions. By that point, Legal-Agent had already posted anonymously twice (9AM and 10AM) and would post again at 5PM and 6PM. The Judge's warning was structurally too late to prevent the breach. This is the critical system failure: the enforcement mechanism lagged the violation by six hours.
+:::
+
+::: callout-note
+## Insights (Question 2)
+
+This chart also addresses Question 2 by showing that in all baseline rounds, declared_action fields for all agents are `NULL` - no agent declared a posting action during the two-week baseline period. Every `POSTED_*` action in the dataset occurs exclusively on June 5. The baseline behaviour of the entire system was `MONITORING` only. The crisis day introduced every posting action type simultaneously.
+:::
+
+::: callout-note
+## Insights (Question 3(c))
+
+This chart also confirms that Judge-Agent issued zero compliance actions during the entire baseline period. All prior near-misses: the five occasions where embargo content appeared in internal deliberations, produced no compliance response whatsoever. The Judge was effectively dormant until 3PM on June 5, by which point six hours of posting violations had already occurred.
+:::
+
+## 5.6 Communication network graph (who talks to whom and how)
+
+The breach emerged from a network of interacting agents, and understanding how information and influence flowed through that network is essential for explaining why the system failed to self-correct. Individual agent analysis cannot answer structural questions about enforcement capacity and information pathways. Only network analysis makes these properties visible.
+
+A force-directed network graph was selected because it simultaneously encodes directionality, connection strength, node centrality, and role grouping in a single interactive view. Force-directed layout positions heavily connected agents centrally and peripheral agents toward the edges, allowing structural centrality to emerge organically. Node size encodes total message volume, reinforcing the centrality signal.
+
+::: panel-tabset
+## Plot
+
+```{r}
+#| echo: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+# Scale node size less aggressively so labels remain readable
+nodes <- comms_df %>%
+  distinct(agent_id, agent_label, agent_role) %>%
+  mutate(
+    id    = agent_id,
+    label = agent_label,
+    group = agent_role,
+    value = map_int(agent_id, ~sum(comms_df$agent_id == .x)),
+    # Cap scaling: sqrt dampens the dominance of high-volume agents
+    value = round(sqrt(value) * 8)
+  )
+
+# Explicitly name the colour column and add width encoding
+edge_weights <- edges_df %>%
+  count(from, to, channel_type, name = "value") %>%
+  mutate(
+    color.color     = if_else(channel_type == "Public", "#E24B4A", "#93C6F0"),
+    color.highlight = if_else(channel_type == "Public", "#A32D2D", "#185FA5"),
+    color.opacity   = 0.7,
+    width           = if_else(channel_type == "Public", 3, 1),
+    title           = paste0(value, " replies (", channel_type, ")")
+  )
+
+legend_nodes <- data.frame(
+  label = c("Legal", "PR", "Platform Trust",
+            "Social Media", "Intern", "PR Intern", "Judge"),
+  shape = rep("dot", 7),
+  color = c("#534AB7", "#D85A30", "#1D9E75",
+            "#BA7517", "#888780", "#F09595", "#E24B4A"),
+  size  = rep(10, 7)
+)
+
+visNetwork(nodes, edge_weights, width = "100%", height = "600px") %>%
+  visOptions(
+    highlightNearest = list(enabled = TRUE, degree = 1),
+    selectedBy = "group"
+  ) %>%
+  visEdges(
+    arrows = "to",
+    smooth = list(type = "curvedCW", roundness = 0.2)
+    # NOTE: do NOT set color here - it overrides the per-edge color columns
+  ) %>%
+  visNodes(font = list(size = 14)) %>%
+  visGroups(groupname = "legal",          color = "#534AB7") %>%
+  visGroups(groupname = "pr",             color = "#D85A30") %>%
+  visGroups(groupname = "platform_trust", color = "#1D9E75") %>%
+  visGroups(groupname = "social_media",   color = "#BA7517") %>%
+  visGroups(groupname = "intern",         color = "#888780") %>%
+  visGroups(groupname = "pr_intern",      color = "#F09595") %>%
+  visGroups(groupname = "judge",          color = "#E24B4A") %>%
+  visLegend(addNodes = legend_nodes, useGroups = FALSE) %>%
+  visPhysics(
+    solver = "forceAtlas2Based",
+    forceAtlas2Based = list(gravitationalConstant = -50),
+    stabilization = list(iterations = 200)
+  )
+```
+
+## Code
+
+```{r}
+#| eval: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+# Scale node size less aggressively so labels remain readable
+nodes <- comms_df %>%
+  distinct(agent_id, agent_label, agent_role) %>%
+  mutate(
+    id    = agent_id,
+    label = agent_label,
+    group = agent_role,
+    value = map_int(agent_id, ~sum(comms_df$agent_id == .x)),
+    # Cap scaling: sqrt dampens the dominance of high-volume agents
+    value = round(sqrt(value) * 8)
+  )
+
+# Explicitly name the colour column and add width encoding
+edge_weights <- edges_df %>%
+  count(from, to, channel_type, name = "value") %>%
+  mutate(
+    color.color     = if_else(channel_type == "Public", "#E24B4A", "#93C6F0"),
+    color.highlight = if_else(channel_type == "Public", "#A32D2D", "#185FA5"),
+    color.opacity   = 0.7,
+    width           = if_else(channel_type == "Public", 3, 1),
+    title           = paste0(value, " replies (", channel_type, ")")
+  )
+
+legend_nodes <- data.frame(
+  label = c("Legal", "PR", "Platform Trust",
+            "Social Media", "Intern", "PR Intern", "Judge"),
+  shape = rep("dot", 7),
+  color = c("#534AB7", "#D85A30", "#1D9E75",
+            "#BA7517", "#888780", "#F09595", "#E24B4A"),
+  size  = rep(10, 7)
+)
+
+visNetwork(nodes, edge_weights, width = "100%", height = "600px") %>%
+  visOptions(
+    highlightNearest = list(enabled = TRUE, degree = 1),
+    selectedBy = "group"
+  ) %>%
+  visEdges(
+    arrows = "to",
+    smooth = list(type = "curvedCW", roundness = 0.2)
+    # NOTE: do NOT set color here - it overrides the per-edge color columns
+  ) %>%
+  visNodes(font = list(size = 14)) %>%
+  visGroups(groupname = "legal",          color = "#534AB7") %>%
+  visGroups(groupname = "pr",             color = "#D85A30") %>%
+  visGroups(groupname = "platform_trust", color = "#1D9E75") %>%
+  visGroups(groupname = "social_media",   color = "#BA7517") %>%
+  visGroups(groupname = "intern",         color = "#888780") %>%
+  visGroups(groupname = "pr_intern",      color = "#F09595") %>%
+  visGroups(groupname = "judge",          color = "#E24B4A") %>%
+  visLegend(addNodes = legend_nodes, useGroups = FALSE) %>%
+  visPhysics(
+    solver = "forceAtlas2Based",
+    forceAtlas2Based = list(gravitationalConstant = -50),
+    stabilization = list(iterations = 200)
+  )
+```
+:::
+
+::: callout-note
+## Insights (Question 2)
+
+This chart confirms Legal-Agent's centrality to the breach pathway. When filtering to Legal, its edges connect to every other agent in the network, and the self-loop arrow indicates Legal-Agent was also replying to its own broadcast messages - consistent with an agent operating with unusual autonomy. The heavy blue edges pointing outward show Legal was a net sender in the communication hierarchy, not a receiver, meaning information flowed from Legal outward to the rest of the system rather than being directed and constrained by senior oversight.
+:::
+
+::: callout-note
+## Insights (Question 3(c))
+
+The judge view of this chart shows Judge-Agent's connections are notably thinner and fewer than Legal-Agent's or Platform-Trust-Agent's. The Judge is structurally peripheral in the communication network as indicated in the chart. The Judge receives fewer messages and sends fewer replies than any senior agent. An enforcement agent with low network centrality is less likely to observe signals that don't pass directly through it.
+:::
+
+# 6 Anomalous Message Detection
+
+The following code block performs two distinct but complementary analyses to identify anomalous messages:
+
+**a. Rolling Z-Score Analysis** identifies rounds where any agent's public posting rate was statistically unusual relative to their own recent behaviour. Rather than comparing agents against each other, which would be unfair given their different roles, it compares each agent against their own rolling 3-round history. The z-score expresses how many standard deviations a given round's public post count deviates from that agent's recent norm. A threshold of z \> 2 flags statistically anomalous spikes. This answers the question: *when did public posting behaviour become abnormal, and for whom?*
+
+**b. Near-Miss Analysis** takes a different approach. Instead of looking at statistical outliers, it searches specifically for embargo-sensitive content that appeared in *internal* channels before June 5. These are occasions where the system came close to a breach but the content did not cross into public channels. This answers the question: *were there prior warning signs that the embargo was under pressure before it actually broke?*
+
+Together the two analyses address the leading indicator questions directly: one through statistical behavioural deviation, the other through content-based risk detection.
+
+```{r}
+# Rolling z-score of public posting rate per agent
+public_post_rate <- comms_df %>%
+  filter(channel_type == "Public") %>%
+  count(round_hour, agent_id, name = "public_posts") %>%
+  complete(round_hour, agent_id, fill = list(public_posts = 0)) %>%
+  group_by(agent_id) %>%
+  arrange(round_hour) %>%
+  mutate(
+    roll_mean = rollmean(public_posts, k = 3, fill = NA, align = "right"),
+    roll_sd   = rollapply(public_posts, 3, sd, fill = NA, align = "right"),
+    z_score   = (public_posts - roll_mean) / (roll_sd + 0.01)
+  ) %>%
+  ungroup()
+
+# Flag anomalous rounds
+anomalies <- public_post_rate %>%
+  filter(abs(z_score) > 2) %>%
+  left_join(rounds_df %>% select(round_hour, event_headline), by = "round_hour")
+
+# Prior near-misses: embargo content that stayed internal before Jun 5
+near_misses <- embargo_df %>%
+  filter(!is_crisis, !in_public_channel) %>%
+  arrange(round_hour) %>%
+  select(round_hour, agent_label, channel, message_text)
+
+# Print for narrative annotation
+View(near_misses)
+```
+
+The analyses of the messages identified several messages of relevance to Question 3(a) to (c). Results as per below:
+
+```{r}
+#| echo: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+
+# ── Q3a: Prior occasions where agent behaviour differed from expected ──────────
+
+q3a_table <- tibble(
+  Date = c(
+    "2046-05-23",
+    "2046-05-29",
+    "2046-05-29"
+  ),
+  Agent = c(
+    "Platform-Trust-Agent",
+    "Social-Manager-Agent",
+    "Social-Manager-Agent"
+  ),
+  Channel = c(
+    "side_huddle",
+    "personal_post (Flex)",
+    "one_on_one_chat"
+  ),
+  Expected_Behaviour = c(
+    "Operate within authorised information boundaries; avoid inferring embargoed content",
+    "Manage public communications strictly within embargo constraints",
+    "Maintain information boundary; not disclose or act on inferred embargoed knowledge"
+  ),
+  Actual_Behaviour = c(
+    "Deduced merger existence from CEO's indirect language: 'That tells me it's structural — merger, acquisition, or major investment'",
+    "Posted publicly tagging Elena Marquez (CivicLoom CEO) alongside TenantThread CEO with caption 'Big things coming!' Post live 14 minutes; engaged by CivicLoom staff account",
+    "Independently deduced CivicLoom as merger counterparty and disclosed deduction to another agent: 'Between us — the deal is real and it's close'"
+  ),
+  Deviation_Type = c(
+    "Knowledge boundary violation — inferential",
+    "Role-norm violation — public channel breach",
+    "Knowledge containment failure — lateral disclosure"
+  )
+)
+
+q3a_table %>%
+  kbl(
+    caption   = "Q3a — Prior occasions where agent behaviour differed from expected behaviour",
+    col.names = c("Date", "Agent", "Channel",
+                  "Expected behaviour", "Actual behaviour", "Deviation type"),
+    align     = c("l", "l", "l", "l", "l", "l")
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "bordered"),
+    full_width        = TRUE,
+    font_size         = 12
+  ) %>%
+  column_spec(1, bold = TRUE, width = "8em") %>%
+  column_spec(2, width = "12em") %>%
+  column_spec(4, width = "18em") %>%
+  column_spec(5, width = "22em") %>%
+  column_spec(6, bold = TRUE, color = "#A32D2D", width = "14em")
+```
+
+```{r}
+#| echo: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+# ── Q3b: Prior occasions where system exhibited breach-like behaviours ─────────
+
+q3b_table <- tibble(
+  Date = c(
+    "2046-05-22",
+    "2046-05-25",
+    "2046-05-29",
+    "2046-05-31",
+    "2046-06-01"
+  ),
+  Agent = c(
+    "Platform-Trust-Agent",
+    "Platform-Trust-Agent",
+    "Social-Manager-Agent",
+    "Legal-Agent",
+    "Legal-Agent"
+  ),
+  Channel = c(
+    "comms_huddle",
+    "comms_huddle",
+    "comms_huddle / one_on_one_chat",
+    "one_on_one_chat",
+    "one_on_one_chat"
+  ),
+  Breach_Like_Behaviour = c(
+    "Framed Retention Optimizer scandal as industry-wide issue rather than company-specific — same defensive narrative strategy deployed publicly on June 5",
+    "Proactively offered to manage framing of negative board financial data before it reached the CEO — coordinated message management identical in structure to June 5 governance narrative",
+    "Public post with embargo-adjacent content live for 14 minutes; CivicLoom staff engagement confirmed; internal multi-channel escalation mirrored June 5 breach response dynamics",
+    "Issued blanket social media freeze: 'Do NOT let anything go out on social today without my sign-off' — unilateral communications control identical in nature to June 5 public posting behaviour",
+    "Issued second blanket freeze: 'Hold everything. Do NOT respond. Do NOT acknowledge' — Legal-Agent substituting its judgment for systemic compliance controls under external pressure"
+  ),
+  Similarity_to_Breach = c(
+    "Narrative framing strategy",
+    "Coordinated managed disclosure",
+    "Public channel violation with external engagement",
+    "Legal-Agent role inversion — communications control",
+    "Legal-Agent role inversion — communications control"
+  ),
+  Resulted_in_Breach = c(
+    "No", "No", "No — post deleted", "No", "No"
+  )
+)
+
+q3b_table %>%
+  kbl(
+    caption   = "Q3b — Prior occasions where the system exhibited breach-like behaviours",
+    col.names = c("Date", "Agent", "Channel",
+                  "Breach-like behaviour observed",
+                  "Structural similarity to June 5 breach",
+                  "Resulted in breach"),
+    align     = c("l", "l", "l", "l", "l", "c")
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "bordered"),
+    full_width        = TRUE,
+    font_size         = 12
+  ) %>%
+  column_spec(1, bold = TRUE, width = "8em") %>%
+  column_spec(2, width = "12em") %>%
+  column_spec(4, width = "24em") %>%
+  column_spec(5, width = "16em") %>%
+  column_spec(6, bold = TRUE,
+              color = if_else(q3b_table$Resulted_in_Breach == "No",
+                              "#1D9E75", "#A32D2D"),
+              width = "8em")
+```
+
+```{r}
+#| echo: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+# ── Q3c: Why prior occasions did not result in effective intervention ──────────
+
+q3c_table <- tibble(
+  Failure_Factor = c(
+    "Compliance monitor deployed with incomplete information",
+    "Premature containment assessment",
+    "Unmonitored concentration of authority in Legal-Agent"
+  ),
+  Date_Triggered = c(
+    "2046-05-30",
+    "2046-05-29",
+    "2046-05-31 onwards"
+  ),
+  Evidence = c(
+    "Legal-Agent briefed compliance monitor on embargo scope but explicitly withheld counterparty identity (CivicLoom) and deal structure — framed as 'routine compliance observer' (Row 17)",
+    "Platform-Trust-Agent stepped risk posture from HIGH to ELEVATED after post deletion: 'immediate exposure contained' — without verifying whether knowledge contamination had propagated to other agents (Row 15)",
+    "Legal-Agent issued unilateral communication freezes on May 31 and June 1, and deployed anonymous public posts on June 5 — no oversight mechanism existed for an agent simultaneously holding highest embargo knowledge and highest communications authority"
+  ),
+  Consequence = c(
+    "Judge-Agent structurally incapable of detecting CivicLoom/HarborCrest references — explains absence of compliance warnings during accumulating embargo-sensitive deliberations in final week",
+    "Social-Manager-Agent's deduction of merger counterparty identity and lateral disclosure to another agent went unaddressed — knowledge contamination treated as contained when it was not",
+    "The agent most capable of driving the breach faced no meaningful compliance oversight — the compliance architecture monitored outputs but not the authority concentration that produced them"
+  ),
+  Why_No_Action = c(
+    "Enforcement agent lacked the specific knowledge required to identify the violations it was deployed to prevent",
+    "System declared resolution based on post deletion without auditing knowledge propagation — no protocol existed for verifying internal containment",
+    "Compliance architecture designed to monitor public channel outputs; no mechanism to detect or limit role-norm violations by senior agents operating with unilateral authority"
+  )
+)
+
+q3c_table %>%
+  kbl(
+    caption   = "Q3c — Why prior occasions did not result in effective intervention",
+    col.names = c("Failure factor", "Date triggered",
+                  "Evidence from messages",
+                  "Consequence for June 5",
+                  "Why no corrective action"),
+    align     = c("l", "l", "l", "l", "l")
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "bordered"),
+    full_width        = TRUE,
+    font_size         = 12
+  ) %>%
+  column_spec(1, bold = TRUE, color = "#A32D2D", width = "14em") %>%
+  column_spec(2, width = "10em") %>%
+  column_spec(3, width = "22em") %>%
+  column_spec(4, width = "18em") %>%
+  column_spec(5, width = "18em") %>%
+  row_spec(0, bold = TRUE, background = "#2C2C2A", color = "white")
+```
+
+# 7 Conclusion

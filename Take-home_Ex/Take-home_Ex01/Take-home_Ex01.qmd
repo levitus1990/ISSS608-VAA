@@ -7,12 +7,14 @@ execute:
   eval: true
   echo: true
   warning: false
-  freeze: true
+  freeze: false
 ---
 
 ## Visual Analytics for Data Discovery: Exploring a Motor Vehicle Insurance Portfolio
 
 ------------------------------------------------------------------------
+
+![](images/Motor Insurance.png)
 
 ## 1 Introduction
 
