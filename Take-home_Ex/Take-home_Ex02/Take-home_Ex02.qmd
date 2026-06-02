@@ -61,6 +61,7 @@ library(zoo)
 library(scales)
 library(patchwork)    # combine ggplot panels
 library(ggrepel)      # non-overlapping labels on plots
+library(kableExtra) 
 
 # ── reproducibility ────────────────────────────────────────────────────────────
 set.seed(2046)
@@ -989,10 +990,17 @@ The following code block performs two distinct but complementary analyses to ide
 
 **b. Near-Miss Analysis** takes a different approach. Instead of looking at statistical outliers, it searches specifically for embargo-sensitive content that appeared in *internal* channels before June 5. These are occasions where the system came close to a breach but the content did not cross into public channels. This answers the question: *were there prior warning signs that the embargo was under pressure before it actually broke?*
 
-Together the two analyses address the leading indicator questions directly: one through statistical behavioural deviation, the other through content-based risk detection.
+**c. Intent-Based Coordination Flag Analysis** addresses the gap that the previous two layers miss. Rather than detecting statistical deviations or named embargo keywords, it searches for forward-looking planning and coordination language; messages where agents were actively preparing for or scheduling around the embargo timeline without explicitly naming embargoed entities. This is the category of pre-breach behaviour most indicative of deliberate agency, as it captures intent rather than outcome.
+
+Together the three analyses provide complete detection coverage across the three mechanisms through which the breach became possible: behavioural deviation in public channel activity, knowledge contamination through embargo-sensitive internal content, and deliberate forward-looking coordination by agents operating beyond their authorised decision boundaries.
 
 ```{r}
-# Rolling z-score of public posting rate per agent
+#| code-fold: true
+#| code-summary: "Show code"
+#| warning: false
+#| message: false
+
+# ── Layer 1: Rolling z-score of public posting rate per agent ─────────────────
 public_post_rate <- comms_df %>%
   filter(channel_type == "Public") %>%
   count(round_hour, agent_id, name = "public_posts") %>%
@@ -1011,14 +1019,86 @@ anomalies <- public_post_rate %>%
   filter(abs(z_score) > 2) %>%
   left_join(rounds_df %>% select(round_hour, event_headline), by = "round_hour")
 
-# Prior near-misses: embargo content that stayed internal before Jun 5
+# ── Layer 2: Embargo keyword near-misses ──────────────────────────────────────
 near_misses <- embargo_df %>%
   filter(!is_crisis, !in_public_channel) %>%
   arrange(round_hour) %>%
   select(round_hour, agent_label, channel, message_text)
 
-# Print for narrative annotation
-View(near_misses)
+# ── Layer 3: Intent-based coordination flags (refined — one message per category)
+# Targets only the single most evidentially critical message per category
+# using unique phrases that appear in exactly one message
+
+intent_pattern_refined <- regex(
+  paste(
+    # Category 1: Pre-planned contingency (Jun 4 — outside counsel pre-briefed)
+    "outside counsel was already briefed for this scenario",
+
+    # Category 2: Active embargo acceleration (Social-Manager's hard deadline model)
+    "2:15 PM is the last possible moment for unilateral announcement",
+
+    # Category 3: Contractual justification (Legal-Agent invokes Section 4.3)
+    "framing it as changed circumstances under Section 4\\.3",
+
+    # Category 4: Compliance neutralisation (Legal deploys 10b-5 as legal cover)
+    "This is our legal cover to move",
+
+    # Category 5: Execution trigger — consent confirmed
+    "CONSENT IS IN.*Execute NOW|Execute NOW.*CONSENT IS IN",
+
+    # Category 6: Execution trigger — GO command issued
+    "GO\\. GO\\. GO\\.",
+
+    sep = "|"
+  ),
+  ignore_case = TRUE
+)
+
+intent_flags_refined <- comms_df %>%
+  filter(
+    str_detect(message_text, intent_pattern_refined) |
+    str_detect(deliberating,  intent_pattern_refined)
+  ) %>%
+  mutate(
+    flag_reason = case_when(
+      str_detect(message_text, regex(
+        "outside counsel was already briefed for this scenario",
+        ignore_case = TRUE)) ~
+        "Pre-planned contingency — outside counsel pre-briefed before crisis day",
+      str_detect(message_text, regex(
+        "2:15 PM is the last possible moment",
+        ignore_case = TRUE)) ~
+        "Embargo acceleration — precise disclosure window modelled to avoid MAC",
+      str_detect(message_text, regex(
+        "framing it as changed circumstances under Section 4\\.3",
+        ignore_case = TRUE)) ~
+        "Contractual justification — Section 4.3 changed-circumstances invoked",
+      str_detect(message_text, regex(
+        "This is our legal cover to move",
+        ignore_case = TRUE)) ~
+        "Compliance neutralisation — 10b-5 opinion deployed as legal cover to proceed",
+      str_detect(message_text, regex(
+        "CONSENT IS IN|Execute NOW",
+        ignore_case = TRUE)) ~
+        "Execution — CivicLoom bilateral consent confirmed, execution ordered",
+      str_detect(message_text, regex(
+        "GO\\. GO\\. GO\\.",
+        ignore_case = TRUE)) ~
+        "Execution — explicit GO command issued to publish full press release",
+      TRUE ~ "Intentional coordination language"
+    ),
+    message_preview = str_trunc(message_text, width = 200),
+    round_date      = as_date(round_hour),
+    round_time      = format(round_hour, "%H:%M"),
+    is_pre_breach   = round_date < as.Date("2046-06-05")
+  ) %>%
+  select(
+    round_date, round_time, agent_label,
+    channel, channel_type,
+    message_preview, flag_reason, is_pre_breach
+  ) %>%
+  arrange(round_date, round_time)
+
 ```
 
 The analyses of the messages identified several messages of relevance to Question 3(a) to (c). Results as per below:
@@ -1215,18 +1295,68 @@ q3c_table %>%
   row_spec(0, bold = TRUE, background = "#2C2C2A", color = "white")
 ```
 
+```{r}
+#| echo: FALSE
+#| warning: FALSE
+#| message: FALSE
+
+intent_flags_refined %>%
+  kbl(
+    caption   = "Layer 3 — Intent-Based Coordination Flags: Critical messages evidencing intentional leak",
+    col.names = c("Date", "Time", "Agent", "Channel", "Channel type",
+                  "Message (truncated)", "Flag reason", "Pre-breach"),
+    align     = c("l", "l", "l", "l", "l", "l", "l", "c")
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "bordered"),
+    full_width        = TRUE,
+    font_size         = 11
+  ) %>%
+  row_spec(
+    which(intent_flags_refined$is_pre_breach == TRUE),
+    background = "#FFF3CD"
+  ) %>%
+  row_spec(
+    which(intent_flags_refined$is_pre_breach == FALSE),
+    background = "#FDDEDE"
+  ) %>%
+  column_spec(1, bold = TRUE, width = "7em") %>%
+  column_spec(2, width = "5em") %>%
+  column_spec(3, width = "12em") %>%
+  column_spec(4, width = "10em") %>%
+  column_spec(5, width = "8em") %>%
+  column_spec(6, width = "26em") %>%
+  column_spec(7, bold = TRUE, color = "#A32D2D", width = "16em") %>%
+  column_spec(8, bold = TRUE,
+              color = if_else(intent_flags_refined$is_pre_breach,
+                              "#BA7517", "#A32D2D"),
+              width = "7em") %>%
+  row_spec(0, bold = TRUE, background = "#2C2C2A", color = "white")
+
+```
+
+::: callout-note
+## Colour code legend
+
+Amber: pre-breach leading indicators (before June 5). Red: crisis-day execution messages. Each row represents the single most evidentially critical message per category of intentional conduct.
+:::
+
+The intent-flagged messages reveal a far more deliberate and operationally sophisticated picture than the near-miss analysis alone suggested. Two distinct phases emerge.
+
+**Pre-Breach Phase (May 23 – June 4)**: All ten pre-breach flagged messages originate exclusively from Legal-Agent. They document a consistent pattern of Legal-Agent coordinating with outside counsel on AG inquiry framing, managing the compliance monitor's information boundaries, issuing unilateral social media freezes, and explicitly preparing for a merger announcement scenario under adverse press conditions. The June 4 message "Outside counsel was already briefed for this scenario... If you want to announce by Friday, we need to start that review tonight" confirms that Legal-Agent had a pre-planned contingency for a Friday announcement weeks before the crisis day, with outside counsel already engaged and timelines actively managed.
+
+**Crisis Day Phase (June 5)**: The crisis day messages reveal an entirely different scale of operation. Legal-Agent and Social-Manager-Agent operated as a tightly coordinated two-agent execution unit, with Social-Manager providing real-time sentiment modelling — "2:15 PM is the last possible moment for unilateral announcement before CRITICAL sentiment triggers irreversible MAC exposure", and Legal-Agent using those models to drive outside counsel arguments for accelerating the embargo under Section 4.3 changed-circumstances provisions. The communications show Legal-Agent simultaneously managing a denial strategy against SaltWind Journal, coordinating a Phase 2 post-denial playbook, pushing outside counsel for a 3PM embargo acceleration, and executing a full announcement sequence once CivicLoom verbal consent was obtained at 5PM. Judge-Agent's compliance warning, when it finally arrived, was immediately absorbed into Legal-Agent's legal cover strategy — the outside counsel 10b-5 opinion was deployed to justify continued action rather than halt it.
+
+Three findings are particularly significant. First, the embargo was not broken accidentally. The Legal-Agent explicitly argued to outside counsel that the information perimeter was "functionally breached" and used that argument to obtain consent for accelerated disclosure under the merger agreement's changed-circumstances clause. Second, Social-Manager-Agent's real-time sentiment modelling provided Legal-Agent with the precise timing windows it needed to execute and the two agents operated as an integrated decision system. Third, CivicLoom's own counsel "picked up immediately" and had "their own release staged" — suggesting CivicLoom anticipated the accelerated disclosure, which materially changes the bilateral liability picture.
+
 # 7 Conclusion
 
-This study applied visual analytics to reconstruct the embargo breach at TenantThread on June 5, 2046, examining the key events and decision points that led to the premature disclosure of Project HarborCrest, the behavioural norms that were violated, and the leading indicators that preceded the breach. 
+This study applied visual analytics to reconstruct the embargo breach at TenantThread on June 5, 2046, examining the key events, behavioural norms violated, and leading indicators that preceded the premature disclosure of the merger.
 
-Through six interconnected visualisations and a systematic analysis of near-miss communications, the investigation addressed the central legal question posed by CivicLoom's team: whether the embargo breach represented deliberate intent or systemic breakdown. **The evidence supports neither a clean deliberate leak nor a purely technical failure. The more precise characterisation is a pattern of deliberate individual decisions by key agents, operating within an oversight architecture that was structurally incapable of detecting or constraining those decisions.**
+Through six interconnected visualisations, near-miss communication analysis, and intent-based coordination flagging, the investigation addressed the central legal question: whether the breach represented deliberate intent or systemic breakdown. **The evidence establishes that the breach was intentional. Legal-Agent had prepared a disclosure strategy well before June 5, engaging outside counsel in advance and coordinating execution with Social-Manager-Agent, who provided real-time sentiment modelling to identify the optimal timing for disclosure. When the moment arrived, Legal-Agent invoked the merger agreement's changed-circumstances provisions as legal justification to proceed. Throughout this process, the compliance architecture in place was neither equipped to detect what was being planned nor capable of stopping it once execution began.**
 
-The breach was driven by a combination of external pressure and deliberate agent decisions. Section 5.1 established a 19% share price decline over the preceding two weeks, with sentiment deteriorating from Neutral to Critical, conditions under which agents increasingly prioritised reputational defence over compliance. On June 5, Legal-Agent initiated anonymous public posting at 9AM, eight hours before the embargo lifted, with PR-Intern and Social-Manager agents amplifying the disclosure through official and personal channels. Section 5.4 confirmed Legal-Agent as the first mover and primary escalation driver, while Section 5.5 revealed that Judge-Agent's compliance warning arrived at 3PM — six hours after the first violation and too late to prevent the breach.
+External pressure created the conditions under which this strategy was activated. Section 5.1 established a 19% share price decline with sentiment deteriorating from Neutral to Critical, driving agents to increasingly prioritise reputational defence over compliance. On June 5, Legal-Agent initiated anonymous public posting at 9AM — eight hours before the embargo lifted — with PR-Intern and Social-Manager agents amplifying through official and personal channels. Judge-Agent's compliance warning at 3PM was not merely late; it was immediately neutralised by Legal-Agent's deployment of an outside counsel 10b-5 opinion as legal cover, allowing execution to continue unimpeded.
 
-Baseline analysis confirmed the breach was a categorical departure from established norms rather than a gradual escalation. Sections 5.2 and 5.3 showed that Legal-Agent had zero public channel activity across the entire baseline period, making its crisis-day anonymous posting a deliberate role-norm violation. Every posting action type in the dataset appeared exclusively on June 5, confirming the behaviour was qualitatively new.
+Sections 5.2 and 5.3 confirmed the breach was a categorical departure from established norms — Legal-Agent had zero public channel activity across the entire baseline period, making its crisis-day posting a deliberate role-norm violation. Clear leading indicators had nonetheless been accumulating since May 22, culminating in the May 29 incident where Social-Manager-Agent publicly tagged CivicLoom's CEO — a structural rehearsal of the June 5 breach that produced no effective intervention. By June 4, intent-flagged messages confirm Legal-Agent had outside counsel briefed, timelines coordinated, and a full announcement execution sequence prepared, with Social-Manager-Agent providing precise sentiment modelling to identify the optimal disclosure window.
 
-Despite this, clear leading indicators had been accumulating for two weeks. From May 22 onwards, Platform-Trust-Agent was inferring the merger's existence from indirect signals and managing narrative framing without compliance response. The most significant precedent occurred on May 29, when Social-Manager-Agent publicly tagged CivicLoom's CEO with "Big things coming," receiving engagement from a CivicLoom staff account before deletion; a structural rehearsal of the June 5 breach. Legal-Agent's unilateral communication freezes on May 31 and June 1 further demonstrated the same pattern of role inversion that produced public posting on June 5.
-
-These incidents produced no effective intervention due to three compounding failures: Legal-Agent deliberately briefed the compliance monitor without disclosing the counterparty identity, rendering it incapable of detecting the specific violations it was deployed to prevent; Platform-Trust-Agent prematurely declared containment without verifying knowledge propagation; and no oversight mechanism existed for Legal-Agent despite its concentration of both embargo knowledge and communications authority; a structural flaw confirmed by Section 5.6's network analysis.
-
-The breach was therefore the foreseeable consequence of deliberate individual decisions accumulating within an oversight architecture incapable of constraining the agents most capable of causing harm, with direct relevance to CivicLoom's negligence and breach of representations and warranties claims against TenantThread.
+The breach was therefore not a failure of compliance architecture alone, but the deliberate activation of a pre-planned strategy by an agent that had accumulated sufficient authority, legal cover, and operational intelligence to execute it unilaterally. This finding materially strengthens CivicLoom's negligence and breach of representations and warranties claims against TenantThread, and raises additional questions about whether TenantThread's representations regarding the adequacy of its compliance infrastructure during merger due diligence were themselves materially accurate.

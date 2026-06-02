@@ -14,7 +14,7 @@ execute:
 
 ------------------------------------------------------------------------
 
-![](images/Motor Insurance.png)
+![](images/Motor%20Insurance.png)
 
 ## 1 Introduction
 
@@ -40,7 +40,7 @@ The analyses in this report are organised across two levels:
 The table below justifies each visualisation choice against visual analytics best practices. The guiding principle is: *a chart is not chosen for its aesthetics but for the question it answers most honestly*.
 
 | Analysis | Selected technique | Rationale |
-|------------------------|------------------------|------------------------|
+|----|----|----|
 | Portfolio composition by policy type | `ggbarstats()` (stacked proportion + χ²) | Shows proportional composition and tests whether bonus score distribution differs significantly across policy types – more informative than a plain stacked bar |
 | Composition by bonus score | `ggbarstats()` (stacked proportion + χ²) | Tests the association between claims history and business type; plain bar answers "how many?" while `ggbarstats()` answers "does the composition differ significantly?" |
 | Geographic distribution | Grouped bar + `geom_text` | Municipality type is a small-cardinality nominal variable; policy counts and proportions are both important – pure proportions would obscure the Island segment's tiny volume |
@@ -185,7 +185,7 @@ insurance <- insurance |>
 The raw dataset does not contain standard actuarial profitability or volatility metrics. These are derived as follows, with all downstream analyses pivoting on these variables:
 
 | KPI | Formula | Interpretation |
-|------------------------|------------------------|------------------------|
+|----|----|----|
 | `loss_ratio` | `total_incurred / total_premium` | Profitability: values \> 1 indicate underwriting losses |
 | `claim_frequency` | `total_claims / total_exposure` | Volatility: claims per policy year |
 | `claim_severity` | `total_incurred / total_claims` (claims \> 0) | Average cost per claim event |
