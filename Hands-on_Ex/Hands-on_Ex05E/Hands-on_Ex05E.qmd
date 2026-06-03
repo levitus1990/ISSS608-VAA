@@ -7,10 +7,10 @@ execute:
   eval: true
   echo: true
   warning: false
-  freeze: true
+  freeze: false
 ---
 
-# Hands-on Exercise 9E - Treemap Visualisation with R
+# Hands-on Exercise 5E - Treemap Visualisation with R
 
 # 1. Overview
 

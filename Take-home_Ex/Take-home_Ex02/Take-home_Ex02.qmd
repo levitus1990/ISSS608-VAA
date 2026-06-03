@@ -7,7 +7,7 @@ execute:
   eval: true
   echo: true
   warning: false
-  freeze: false
+  freeze: true
 ---
 
 ## Take-Home Exercise 2 - MC1: TenantThread Embargo Breach Visual Analysis
