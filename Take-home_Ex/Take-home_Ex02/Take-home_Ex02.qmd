@@ -7,7 +7,7 @@ execute:
   eval: true
   echo: true
   warning: false
-  freeze: true
+  freeze: false
 ---
 
 ## Take-Home Exercise 2 - MC1: TenantThread Embargo Breach Visual Analysis
@@ -606,7 +606,7 @@ This chart also provided insights as to why the prior occasions did not result i
 
 ## 5.4 Embargo keyword escalation timeline (the causal sequence)
 
-The legal question of deliberate leak versus systemic breakdown turns on the sequence and attribution of embargo-sensitive events: (i) who knew what, (ii) when they acted, and (iii) whether actions suggest coordination or independent failure. A reconstruction of this chain of events is more evidentially useful than any aggregate summary.
+The legal question of deliberate leak versus systemic breakdown turns on the sequence and attribution of embargo-sensitive events: (i) who knew what, (ii) when they acted, and (iii) whether actions suggest coordination or independent failure. A reconstruction of this chain of events is more evidentially useful than any aggregate summary. For more details on what key terms were flagged as 'Embargo-Sensitive' content, please refer to [Section 3e](https://isss-608-vaa-ten.vercel.app/Take-home_Ex/Take-home_Ex02/Take-home_Ex02#e-embargo-sensitive-communications).
 
 A dot plot was selected because the data is sparse and event-based; the goal is to show *when* specific incidents occurred rather than aggregate volumes. Dual encoding of shape and size - triangles for public posts, circles for internal mentions - ensures public violations remain visually prominent even within a dense field of internal activity.
 
