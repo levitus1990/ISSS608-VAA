@@ -11,7 +11,7 @@ execute:
   eval: true
   echo: true
   warning: false
-  freeze: false
+  freeze: true
 ---
 
 # Hands-on Exercise 7 - Visualising and Analysing Time-oriented Data
